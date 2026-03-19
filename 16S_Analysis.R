@@ -765,7 +765,7 @@ filt_rare_wet2<- subset_samples(rep2_named_phy, `month.collected` %in% ('wet'))
 #reorder the metadata to match the order of the phyloseq
 samp<- sample_data(filt_rare_wet2) #pull out data from phyloseq
 
-metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$`#SampleID`, row.names(samp))), ]
+metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$SampleID, row.names(samp))), ]
 
 
 ## NECESSARY Subset for RGM data----
@@ -782,7 +782,7 @@ filt_rare_RGM2<- rep2_named_phy%>%
 #order samples
 sampR<- sample_data(filt_rare_RGM2) #pull out data from phyloseq
 
-metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$SampleID, row.names(sampR))), ]
 
 
 
@@ -818,6 +818,7 @@ permanova_rgm
 #pairwise permanova to see which groups are different
 permanova_pairwise(distance(filt_rare_RGM2, method='wunifrac'), grp=metadata_RGM2$trt_month)
 
+
 ### see Plots_16S file for code on how to make the plots
 
 ## Dry RGM Permanova----
@@ -828,7 +829,7 @@ metaDryRGM2<- metadata_RGM2 %>%
 #order samples
 sampRd<- sample_data(filt_dryRGM2) #pull out data from phyloseq
 
-metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$`#SampleID`, row.names(sampRd))), ]
+metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$SampleID, row.names(sampRd))), ]
 
 set.seed(200)
 #permanova
@@ -947,7 +948,7 @@ simperW_taxa<-taxaW[row.names(taxaW) %in% simpWASV,]
 
 
 #see only significant species
-comparisons <- c("latrine_control")
+comparisons <- c("control_rgm_latrine_rgm" , "control_rgm_control_lia" , "control_rgm_latrine_lia" , "latrine_rgm_control_lia", "latrine_rgm_latrine_lia", "control_lia_latrine_lia")
 
 simper.results <- c()
 
@@ -1075,8 +1076,8 @@ ind_taxaC_Wrgm<- ind_taxaC_Wrgm %>% left_join(sigC_Wrgm, by='ASV')
 # you can collapse it to just get one row for each unique ID
 unique_ind_taxaL_lia<- unique(ind_taxaL_lia)
 unique_ind_taxaC_lia<- unique(ind_taxaC_lia)
-unique_ind_taxaL_rgm<- unique(ind_taxaL_rgm)
-unique_ind_taxaC_rgm<- unique(ind_taxaC_rgm)
+unique_ind_taxaL_Wrgm<- unique(ind_taxaL_Wrgm)
+unique_ind_taxaC_Wrgm<- unique(ind_taxaC_Wrgm)
 
 
 #find taxa that are shared and different
@@ -1109,10 +1110,10 @@ filt_dryRGM2<- subset_samples(filt_rare_RGM2, `month.collected` %in% ('dry'))
 
 ## 8b. extract data from the phyloseq and format
 #extract taxa table
-taxa_dry <- as.data.frame(tax_table(filt_rare_RGM2)) #taxonomy
+taxa_dry <- as.data.frame(tax_table(filt_dryRGM2)) #taxonomy
 
 #extract the asvs 
-asvDrgm<- as.data.frame(otu_table(filt_rare_RGM2))
+asvDrgm<- as.data.frame(otu_table(filt_dryRGM2))
 
 #transpose the asv matrix 
 dim(asvDrgm)
@@ -1194,7 +1195,7 @@ RGM2_phy_ASV<- filt_rare_rep2%>%
 #order samples
 sampR<- sample_data(RGM2_phy_ASV) #pull out data from phyloseq
 
-metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$SampleID, row.names(sampR))), ]
 
 #make season a factor
 rgm2_sampdata<- sample_data(RGM2_phy_ASV)
@@ -1235,8 +1236,8 @@ rgmLSeason_noRE<-ancombc2(data = rgmL_rep2_phy, tax_level = "Genus",
 rgmLSeason_prim<-rgmLSeason_noRE$res
 
 #save it as an rds file
-saveRDS(rgmLSeason_prim, file='F:\\Research\\16S_Soil\\RDS Files\\rgmLSeasonDA.rds')
-rgmLSeason_prim<- readRDS('F:\\Research\\16S_Soil\\RDS Files\\rgmLSeasonDA.rds')
+saveRDS(rgmLSeason_prim, file='rgmLSeasonDA.rds')
+rgmLSeason_prim<- readRDS('rgmLSeasonDA.rds')
 
 #filter for what's significant
 rgmLSeasonSig<-rgmLSeason_prim %>% 

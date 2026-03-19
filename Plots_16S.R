@@ -365,7 +365,7 @@ wetbeta<-ggplot(metadata_wet2, aes(axis01, axis02)) +
   labs(colour = "Treatment & Soil Age", title='by Soil Age') +
   theme_bw() +
   theme
-
+wetbeta
 #export the plot to a powerpoint to edit
 fig_dml<- rvg::dml(ggobj = wetbeta)
 
