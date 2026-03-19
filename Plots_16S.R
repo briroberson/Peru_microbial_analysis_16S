@@ -704,6 +704,7 @@ heatlia<-plot_ts_heatmap(Phy_relabLt, metalia2, 0.01, "latrine_trt", colors=c('#
                                    margin = margin(c(-1.5,0,0,0))),
         plot.margin = unit(c(0.1,0.1,0.1,1), "cm"))+
   labs(title='LIA')
+heatlia
 #the colors part in the first line of the heatmap sets the gradient for the tile colors.
 # you can set up to three
 
@@ -755,7 +756,7 @@ heatrgmw<-plot_ts_heatmap(Phy_relabWt, metargmW2, 0.01, "latrine_trt", colors=c(
                                    margin = margin(c(-1.5,0,0,0))),
         plot.margin = unit(c(0.1,0.1,0.1,1), "cm"))+
   labs(title='Wet RGM')
-
+heatrgmw
 #export the plot to a powerpoint to edit
 fig_dml<- rvg::dml(ggobj = heatrgmw)
 
