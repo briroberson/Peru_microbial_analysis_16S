@@ -35,6 +35,7 @@ wetrichel<-ggplot(metadata_wet, aes(x=elevation, y=Observed, color=treatment))+
   labs(title='Wet Richness')+
   theme+
   theme_bw()
+wetrichel
 
 #export the plot to a powerpoint to edit
 fig_dml<- rvg::dml(ggobj = wetrichel)
@@ -57,7 +58,7 @@ wetshanel<-ggplot(metadata_wet, aes(x=elevation, y=Shannon, color=treatment))+
   labs(title='Wet Shannon')+
   theme+
   theme_bw()
-
+wetshanel
 #export the plot to a powerpoint to edit
 fig_dml<- rvg::dml(ggobj = wetshanel)
 
@@ -184,7 +185,7 @@ wetrich<-ggplot(metadata_wet, aes(treatment, Observed)) +
   theme_bw() +
   theme+
   facet_wrap(~soilAge) #so that it shows two panels, one for each soil age
-
+wetrich
 #export the plot to a powerpoint to edit
 fig_dml<- rvg::dml(ggobj = wetrich)
 

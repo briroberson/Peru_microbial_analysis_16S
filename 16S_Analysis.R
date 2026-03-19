@@ -177,14 +177,14 @@ final_filtered_phy
 #steps 1b-3e
 
 saveRDS(filt_rare_phy, file="F:\\Research\\16S_Soil\\RDS Files\\filt_rare_phy.rds") #use whatever file path for where you want to save it
-filt_rare_phy<-readRDS("F:\\Research\\16S_Soil\\RDS Files\\filt_rare_phy.rds")
+filt_rare_phy<-readRDS("filt_rare_phy_16s.rds")
 
 
 # Alpha Diversity ----
 ############
 ############
 
-###### 4. Diversity Analysis
+###### 4. Diversity Analysis [AGGLOMERATED GENUS LEVEL]
 
 ## NECESSARY Calculate Diversity ----
 ### 4a. Calculate diversity
@@ -237,14 +237,15 @@ metadata_filt<-metadata %>%
   filter(!is.na(Shannon))
 
 # ### All data shannon
-#all_shan_div<-estimate_richness(filt_rare_phy, measures='Shannon')
-#all_shan_div$`#SampleID`<- row.names(all_shan_div)
+all_shan_div<-estimate_richness(filt_rare_phy, measures='Shannon')
+all_shan_div$`#SampleID`<- row.names(all_shan_div)
 
 # #calculate all richness (how many unique ASVs each sample had)
 #all_richness<- estimate_richness(filt_rare_phy, measures='Observed')
 # #add sample names
 #all_richness$`#SampleID`<- row.names(all_richness)
-# 
+#
+
 
 #All Richness
 richness_glom<- data.frame(diversity(glom_asv, index=))
@@ -303,6 +304,74 @@ metadata_filt<-metadata_filt %>%
   left_join(vicugnaRAI, by='latrine') %>% 
   dplyr::select(-c(Species, Effort, n_all, n_IE, RAI_all))
 
+
+
+###### 4. Diversity Analysis [AT THE ASV level]
+
+## NECESSARY Calculate Diversity 
+### 4a. Calculate diversity
+# 
+
+#fix metadata names 
+metadata <- metadata %>%
+  rename(SampleID = `#SampleID`)
+
+# ### All data shannon
+all_shan_div<-estimate_richness(filt_rare_phy, measures='Shannon')
+all_shan_div$SampleID<- row.names(all_shan_div)
+
+#merge with the metadata so we can run a model and filter out the stuff already filtered out
+
+metadata_filt<-metadata %>%
+  left_join(all_shan_div, by='SampleID') %>%
+  filter(!is.na(Shannon))
+
+
+#doesn't like non-integers from rarefaction averaging, so calc richness with vegan specnumber() 
+otu_mat <- as(otu_table(filt_rare_phy), "matrix") 
+if(taxa_are_rows(filt_rare_phy)) {otu_mat <- t(otu_mat)} #transpose
+
+richness <- specnumber(otu_mat) #calculate richness
+sample_ids <- sample_names(filt_rare_phy) #grab samp IDs
+all_richness <- data.frame(SampleID = sample_ids, Observed = richness)
+
+# #merge with metadata
+metadata_filt<- metadata_filt %>% 
+  left_join(all_richness, by='SampleID') %>% 
+  filter(!is.na(Observed))
+
+# all inverse simpson
+all_simpson<- estimate_richness(filt_rare_phy, measures='InvSimpson')
+all_simpson$`SampleID`<- row.names(all_simpson)
+
+metadata_filt<- metadata_filt %>% 
+  left_join(all_simpson, by='SampleID')
+
+# all Pielou evenness
+overall_S <- sum(colSums(otu_mat) > 0) #calc total number of ASVs
+overall_S
+metadata_filt$Pielou<- metadata_filt$Shannon/ log(overall_S)
+
+
+#add elevation
+#format latrine names
+waypoints$latrineF<-gsub("^.{0,4}", "", waypoints$latrine)
+waypoints$latrine<- paste("L", waypoints$latrineF, sep='') 
+
+#sometimes it makes weird column names so try just highlighting this code and rerunning it
+metadata_filt<- metadata_filt %>% 
+  left_join(waypoints, by='latrine') 
+
+#also make an elevation reference column that is elevation from a certain point
+min(metadata_filt$elevation)
+metadata_filt$elevation_ref<- (metadata_filt$elevation-5111)
+#instead of true elevation, this is elevation from ~5100m
+
+#format slope and aspect data to be merged
+slope_aspect$latrine<- slope_aspect$Latrine
+#join them together
+metadata_filt<- metadata_filt %>% 
+  left_join(slope_aspect, by='latrine')
 
 
 ############ make the things going into the models factors
@@ -537,7 +606,12 @@ lrtest(m_RGM_simp, m_RGM_simp_nullS)
 m_RGM_simp_nullI<- lmer(InvSimpson~treatment*elevation_sc+`month-collected`+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM)
 lrtest(m_RGM_simp, m_RGM_simp_nullI)
 
-
+### Pielou evenness ----
+#logit transform Pielou to use a linear model with it
+m_RGM_pie<- lmer(logit(Pielou)~treatment*`month-collected`+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data = metadata_RGM)
+summary(m_RGM_pie)
+Anova(m_RGM_pie, type='III')
+qqnorm(residuals(m_RGM_pie))
 
 
 
@@ -615,7 +689,7 @@ metadata_factored$latrine_trt<- as.factor(metadata_factored$latrine_trt)
 sampr<- sample_data(filt_rare_phy) #pull out data from phyloseq
 
 #order metadata to match that from phyloseq
-metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$`#SampleID`, row.names(sampr))), ]
+metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$SampleID, row.names(sampr))), ]
 
 set.seed(200)
 #run permanova
@@ -652,24 +726,24 @@ taxa<- as.data.frame(tax_table(filt_rare_rep2))
 tree<- phy_tree(filt_rare_rep2)
 #make sure tips are in same order as taxa
 sum(tree$tip.label==row.names(taxa)) 
-#if using replicate 2, it should print 19987 (because that's how many asvs there are
+#if using replicate 2, it should print 28372 (because that's how many asvs there are
 ## and so that tells us that the tree tips are in the same order of the taxa table)
 
 #put original names into df
 #use both_names to look up the original qiime2 asv name
 both_names<- data.frame(original=rownames(taxa))
 #rename asvs in taxa table and add to df
-rownames(taxa)<- paste('ASV', seq(1,19972,1), sep='_')
+rownames(taxa)<- paste('ASV', seq(1,28372,1), sep='_')
 both_names$number<- rownames(taxa)
 #take out asv table and rename that too
 asvfull<- otu_table(filt_rare_rep2)
-rownames(asvfull)<- paste('ASV', seq(1,19972,1), sep='_')
+rownames(asvfull)<- paste('ASV', seq(1,28372,1), sep='_')
 #convert them into matrix to put back into phyloseq
 tax<- tax_table(as.matrix(taxa))
 otu<- otu_table(as.matrix(asvfull), taxa_are_rows = T)
 sample<- sample_data(filt_rare_rep2)
 #rename the tree tips too
-tree$tip.label<- paste('ASV', seq(1,19972,1), sep='_')
+tree$tip.label<- paste('ASV', seq(1,28372,1), sep='_')
 
 #put all this back into phyloseq so ASVs now have a normal number name
 rep2_named_phy<- phyloseq(otu, tax, sample, tree)
