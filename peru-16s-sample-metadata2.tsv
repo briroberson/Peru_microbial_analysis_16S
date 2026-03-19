@@ -1,4 +1,4 @@
-SampleID	latrine	treatment	month-collected	year-collected	replicate	pcr-plate-16s	latrine_trt	latrine_trt_month	trt_month	soilAge	trt_soilAge	trt_month_soilAge
+#SampleID	latrine	treatment	month-collected	year-collected	replicate	pcr-plate-16s	latrine_trt	latrine_trt_month	trt_month	soilAge	trt_soilAge	trt_month_soilAge
 1	L80 	control	dry	2023	1	1	L80_control	L80_control_dry	control_dry	rgm	control_rgm	control_dry_rgm
 2	L80 	control	dry	2023	2	1	L80_control	L80_control_dry	control_dry	rgm	control_rgm	control_dry_rgm
 3	L80 	latrine	dry	2023	1	1	L80_latrine	L80_latrine_dry	latrine_dry	rgm	latrine_rgm	latrine_dry_rgm
@@ -93,8 +93,8 @@ SampleID	latrine	treatment	month-collected	year-collected	replicate	pcr-plate-16
 92	L51	control	wet	2023	2	1	L51_control	L51_control_wet	control_wet	rgm	control_rgm	control_wet_rgm
 93	L51	latrine	wet	2023	1	1	L51_latrine	L51_latrine_wet	latrine_wet	rgm	latrine_rgm	latrine_wet_rgm
 94	L51	latrine	wet	2023	2	1	L51_latrine	L51_latrine_wet	latrine_wet	rgm	latrine_rgm	latrine_wet_rgm
-poscontA	NA	NA	NA	NA	NA	1	NA	NA	NA	NA	NA	NA
-negcontA	NA	NA	NA	NA	NA	1	NA	NA	NA	NA	NA	NA
+poscontA						1						
+negcontA						1						
 95	L73	control	wet	2023	1	2	L73_control	L73_control_wet	control_wet	rgm	control_rgm	control_wet_rgm
 96	L73	control	wet	2023	2	2	L73_control	L73_control_wet	control_wet	rgm	control_rgm	control_wet_rgm
 97	L73	latrine	wet	2023	1	2	L73_latrine	L73_latrine_wet	latrine_wet	rgm	latrine_rgm	latrine_wet_rgm
@@ -167,5 +167,5 @@ negcontA	NA	NA	NA	NA	NA	1	NA	NA	NA	NA	NA	NA
 20B	L86	latrine	dry	2023	2	2	L86_latrine	L86_latrine_dry	latrine_dry	rgm	latrine_rgm	latrine_dry_rgm
 23B	L71	latrine	dry	2023	1	2	L71_latrine	L71_latrine_dry	latrine_dry	rgm	latrine_rgm	latrine_dry_rgm
 24B	L71	latrine	dry	2023	2	2	L71_latrine	L71_latrine_dry	latrine_dry	rgm	latrine_rgm	latrine_dry_rgm
-poscontB	NA	NA	NA	NA	NA	2	NA	NA	NA	NA	NA	NA
-negcontB	NA	NA	NA	NA	NA	2	NA	NA	NA	NA	NA	NA
+poscontB						2						
+negcontB						2						

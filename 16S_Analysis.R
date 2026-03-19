@@ -51,13 +51,13 @@ library(emmeans)
 
 ### 1a. Metadata and elevation and slope/aspect
 #the metadata
-metadata<-readr::read_tsv("F:\\Research\\16S_Soil\\peru-16s-sample-metadata2.tsv")
+metadata<-readr::read_tsv("peru-16s-sample-metadata2.tsv")
 #this is the elevation file
-waypoints<- read.csv("F:\\Research\\waypoints.csv")
+waypoints<- read.csv("waypoints.csv")
 #slope and aspect file
-slope_aspect<- read.csv("F:\\Research\\16S_Soil\\latrine_geog_info.csv")
+slope_aspect<- read.csv("latrine_geog_info.csv")
 #vicugna RAI
-vicugnaRAI<- read.csv("F:\\Research\\VicugnaRAI_20251229.csv")
+vicugnaRAI<- read.csv("VicugnaRAI_20251229.csv")
 
 ### 1b. Other files, loaded into a phyloseq
 # Load Other Data ----
