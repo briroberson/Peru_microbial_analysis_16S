@@ -1515,12 +1515,12 @@ rgmDryTreatmentDA<-ancombc2(data = rgmD_rep2_phy, tax_level = "Genus",
                             lme_control = lme4::lmerControl(),
                             mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
 
-#put primary results in data frame
+ #put primary results in data frame
 rgmDryT_prim<-rgmDryTreatmentDA$res
 
 #save it as an rds file
-saveRDS(rgmDryT_prim, file='F:\\Research\\16S_Soil\\RDS Files\\rgmDryT_prim.rds')
-rgmDryT_prim<-readRDS('F:\\Research\\16S_Soil\\RDS Files\\rgmDryT_prim.rds')
+saveRDS(rgmDryT_prim, file='rgmDryT_prim.rds')
+rgmDryT_prim<-readRDS('rgmDryT_prim.rds')
 
 #filter for what's significant
 rgmDryTSig<-rgmDryT_prim %>% 
