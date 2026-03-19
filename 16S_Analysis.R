@@ -1331,8 +1331,8 @@ rgmCSeason_noRE<-ancombc2(data = rgmC_rep2_phy, tax_level = "Genus",
 rgmCSeason_prim<-rgmCSeason_noRE$res
 
 #save it as an rds file
-saveRDS(rgmCSeason_prim, file='F:\\Research\\16S_Soil\\RDS Files\\rgmCSeasonDA.rds')
-rgmCSeason_prim<- readRDS('F:\\Research\\16S_Soil\\RDS Files\\rgmCSeasonDA.rds')
+saveRDS(rgmCSeason_prim, file='rgmCSeasonDA.rds')
+rgmCSeason_prim<- readRDS('rgmCSeasonDA.rds')
 
 #filter for what's significant
 rgmCSeasonSig<-rgmCSeason_prim %>% 
@@ -1404,8 +1404,8 @@ rgmWetTreatmentDA<-ancombc2(data = rgmW_rep2_phy, tax_level = "Genus",
 rgmWetT_prim<-rgmWetTreatmentDA$res
 
 #save it as an rds file
-saveRDS(rgmWetT_prim, file='F:\\Research\\16S_Soil\\RDS Files\\rgmWetT_prim.rds')
-rgmWetT_prim<-readRDS('F:\\Research\\16S_Soil\\RDS Files\\rgmWetT_prim.rds')
+saveRDS(rgmWetT_prim, file='rgmWetT_prim.rds')
+rgmWetT_prim<-readRDS('rgmWetT_prim.rds')
 
 #filter for what's significant
 rgmWetTSig<-rgmWetT_prim %>% 
