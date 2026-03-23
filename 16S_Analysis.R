@@ -363,8 +363,8 @@ Wel_sd<-sd(metadata_wet$elevation)
 (5100-Wel_mean)/Wel_sd
 
 ### Richness ----
-#wet season richness using the reference elevation
-m_wet_richNB<- lmer(Observed.y~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet, na.action='na.fail')
+#wet season richness, poisson model bc not overdispersed
+m_wet_richNB<- glmer(Observed~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet, na.action='na.fail', family=poisson(link='log'))
 summary(m_wet_richNB)
 Anova(m_wet_richNB, type='III')
 emmeans(m_wet_richNB, pairwise~treatment*soilAge)
@@ -377,26 +377,26 @@ emmeans(m_wet_richNB, pairwise~treatment*soilAge)
 # the latrine:elevation coefficient times the scale(elevation) value (ex -.34408*1.89 + .25140*1.89)
 
 #do LIA to see if treatment is significant
-wet_richLIA<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metalia2)
+wet_richLIA<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metalia2,family=poisson(link='log'))
 summary(wet_richLIA)
 Anova(wet_richLIA)
 
 #do RGM wet to see if treatment is significant
-wet_richRGMw<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metargmW2)
+wet_richRGMw<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metargmW2,family=poisson(link='log'))
 summary(wet_richRGMw)
 Anova(wet_richRGMw)
 
 #compare AIC to model without elevation
-m_wet_rich<-lmer(Observed~treatment*soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
+m_wet_rich<-glmer(Observed~treatment*soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet,family=poisson(link='log'))
 summary(m_wet_rich)
 Anova(m_wet_rich)
 
 #compare to soil Age null model. this tests if having soil age at all in the model makes it better
-m_wet_rich_nullS<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
+m_wet_rich_nullS<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metadata_wet,family=poisson(link='log'))
 lrtest(m_wet_richNB, m_wet_rich_nullS) #if p value is sig, then the regular model is better than the null model
 
 #compare to interaction null model. this tests if the soil age interaction is significant
-m_wet_rich_nullI<- glmer.nb(Observed~treatment*elevation_ref+soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
+m_wet_rich_nullI<- glmer(Observed~treatment*elevation_ref+soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet,family=poisson(link='log'))
 lrtest(m_wet_richNB, m_wet_rich_nullI)
 
 
@@ -457,7 +457,7 @@ metaWetRGM_both<-metaWetRGM_both %>%
   mutate(elevation_sc=scale(elevation))
 
 #richness
-m_WetRGM_richNB<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaWetRGM_both)
+m_WetRGM_richNB<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaWetRGM_both, family=poisson(link='log'))
 summary(m_WetRGM_richNB)
 Anova(m_WetRGM_richNB, type='III')
 
@@ -491,7 +491,7 @@ metaLIA_both<-metaLIA_both %>%
   mutate(elevation_sc=scale(elevation))
 
 #richness
-m_LIA_richNB<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaLIA_both)
+m_LIA_richNB<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaLIA_both,family=poisson(link='log'))
 summary(m_LIA_richNB)
 Anova(m_LIA_richNB, type='III')
 
@@ -520,17 +520,17 @@ str(metadata_RGM)
 
 ### Richness----
 #RGM model richness with scaled elevation
-m_season_richNB<- glmer.nb(Observed~treatment*`month-collected`+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM)
+m_season_richNB<- glmer(Observed~treatment*`month-collected`+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM,family=poisson(link='log'))
 summary(m_season_richNB)
 Anova(m_season_richNB, type='III')
 emmeans(m_season_richNB, pairwise~treatment*`month-collected`)
 
 #compare to season null model. tests if having season at all is better than not having it
-m_season_rich_nullS<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM)
+m_season_rich_nullS<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM,family=poisson(link='log'))
 lrtest(m_season_richNB, m_season_rich_nullS)
 
 #compare to interaction null model. tests if interaction with season is better than non interaction
-m_season_rich_nullI<- glmer.nb(Observed~treatment*elevation_sc+`month-collected`+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM)
+m_season_rich_nullI<- glmer(Observed~treatment*elevation_sc+`month-collected`+(1|latrine_trt_month)+(1|latrine), data=metadata_RGM,family=poisson(link='log'))
 lrtest(m_season_richNB, m_season_rich_nullI) # if pvalue is sig, interaction is better than not
 
 #plot the richness data to see interaction between treatment and elevation
@@ -583,11 +583,6 @@ qqnorm(residuals(m_RGM_pie))
 
 
 
-
-
-
-
-
 ### RGM Dry----
 metaDryRGM_both<- metadata_filt %>% 
   filter(soilAge=='rgm' & `month-collected`=='dry')
@@ -597,7 +592,7 @@ metaDryRGM_both<-metaDryRGM_both %>%
   mutate(elevation_sc=scale(elevation))
 
 #richness
-m_dry_richNB<- glmer.nb(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
+m_dry_richNB<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both,family=poisson(link='log'))
 summary(m_dry_richNB)
 Anova(m_dry_richNB, type='III')
 
@@ -636,11 +631,11 @@ qqnorm(residuals(m_dryRGM_shanRAI))
 ### NECESSARY Reroot the tree.----
 # 5a. Reroot the tree
 #It has to be binary but now it is not since we trimmed it
-ps_tree<- phy_tree(filt_rare_phy) #put tree into an object
+ps_tree<- phy_tree(filt_rare_phy_16s) #put tree into an object
 is.binary(ps_tree) #asking if it is binary. if false, go to next step
 
-phy_tree(filt_rare_phy)<-multi2di(ps_tree) #fix the tree and put it back in the phyloseq
-is.binary(phy_tree(filt_rare_phy)) #check if it's binary, should be true
+phy_tree(filt_rare_phy_16s)<-multi2di(ps_tree) #fix the tree and put it back in the phyloseq
+is.binary(phy_tree(filt_rare_phy_16s)) #check if it's binary, should be true
 
 
 
@@ -654,10 +649,10 @@ metadata_factored$replicate<- as.factor(metadata_factored$replicate)
 metadata_factored$latrine_trt<- as.factor(metadata_factored$latrine_trt)
 
 #reorder the metadata to match the order of the phyloseq
-sampr<- sample_data(filt_rare_phy) #pull out data from phyloseq
+sampr<- sample_data(filt_rare_phy_16s) #pull out data from phyloseq
 
 #order metadata to match that from phyloseq
-metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$SampleID, row.names(sampr))), ]
+metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$`#SampleID`, row.names(sampr))), ]
 
 set.seed(200)
 #run permanova
@@ -665,7 +660,7 @@ set.seed(200)
 #permanova
 
 #new way so that it is testing replicate but within each latrine. we think this is the proper way to test replicate variation
-perm_rep<- adonis2(distance(filt_rare_phy, method='wunifrac')~replicate*latrine_trt, data=metadata_factored_rep, by='terms')
+perm_rep<- adonis2(distance(filt_rare_phy_16s, method='wunifrac')~replicate*latrine_trt, data=metadata_factored_rep, by='terms')
 perm_rep
 
 
@@ -682,7 +677,7 @@ metadata_factored$trt_soilAge<- as.factor(metadata_factored$trt_soilAge)
 ## they weren't different so we are going to choose just replicate 2 from the data
 ##because having 2 is pseudoreplication
 ##you could choose replicate 1, or randomly sample, whatever you want
-filt_rare_rep2<- subset_samples(filt_rare_phy, replicate %in% (2))
+filt_rare_rep2<- subset_samples(filt_rare_phy_16s, replicate %in% (2))
 
 #### make a dataframe that has the original and new asv names for convenience
 ## the original names are a random long string of characters so this makes them easier
@@ -733,7 +728,7 @@ filt_rare_wet2<- subset_samples(rep2_named_phy, `month.collected` %in% ('wet'))
 #reorder the metadata to match the order of the phyloseq
 samp<- sample_data(filt_rare_wet2) #pull out data from phyloseq
 
-metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$SampleID, row.names(samp))), ]
+metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$`#SampleID`, row.names(samp))), ]
 
 
 ## NECESSARY Subset for RGM data----
@@ -750,7 +745,7 @@ filt_rare_RGM2<- rep2_named_phy%>%
 #order samples
 sampR<- sample_data(filt_rare_RGM2) #pull out data from phyloseq
 
-metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$SampleID, row.names(sampR))), ]
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
 
 
 
@@ -797,7 +792,7 @@ metaDryRGM2<- metadata_RGM2 %>%
 #order samples
 sampRd<- sample_data(filt_dryRGM2) #pull out data from phyloseq
 
-metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$SampleID, row.names(sampRd))), ]
+metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$`#SampleID`, row.names(sampRd))), ]
 
 set.seed(200)
 #permanova
