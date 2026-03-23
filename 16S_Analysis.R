@@ -189,14 +189,14 @@ filt_rare_phy<-readRDS("filt_rare_phy_16s.rds")
 ## NECESSARY Calculate Diversity ----
 ### 4a. Calculate diversity
 # recode all NAs as incertae sedis so they are counted as the same
-taxa_all<- data.frame(tax_table(filt_rare_phy))
+taxa_all<- data.frame(tax_table(filt_rare_phy_16s))
 taxa_all$Phylum[is.na(taxa_all$Phylum)] <- "Incertae_Sedis"
 taxa_all$Class[is.na(taxa_all$Class)] <- "Incertae_Sedis"
 taxa_all$Order[is.na(taxa_all$Order)] <- "Incertae_Sedis"
 taxa_all$Family[is.na(taxa_all$Family)] <- "Incertae_Sedis"
 taxa_all$Genus[is.na(taxa_all$Genus)] <- "Incertae_Sedis"
 
-filt_rare_phy@tax_table<-tax_table(as.matrix(taxa_all))
+filt_rare_phy_16s@tax_table<-tax_table(as.matrix(taxa_all))
 
 # for now we are calculating diversity for just things IDed to genus
 #this means richness is how many individual genera are in each sample and Shannon
@@ -205,7 +205,7 @@ filt_rare_phy@tax_table<-tax_table(as.matrix(taxa_all))
 #filter out incertae sedis for genus level alpha diversity
 taxa_noNA_genus<- taxa_all %>% 
   filter(Genus != 'Incertae_Sedis')
-phy_noNA_genus<- filt_rare_phy
+phy_noNA_genus<- filt_rare_phy_16s
 phy_noNA_genus@tax_table<- tax_table(as.matrix(taxa_noNA_genus))
 
 #glomerate by genus
@@ -220,7 +220,7 @@ glom_asv<- data.frame(t(glom_asv), check.names = F)
 
 ### All data Shannon
 #calculate shannon's diversity
-shan_div_glom<-data.frame(diversity(glom_asv, index='shannon'))\
+shan_div_glom<-data.frame(diversity(glom_asv, index='shannon'))
 
 #rename column to Shannon
 colnames(shan_div_glom)[1]<- 'Shannon'
@@ -236,48 +236,34 @@ metadata_filt<-metadata %>%
   left_join(shan_div_glom, by='#SampleID') %>%
   filter(!is.na(Shannon))
 
-# ### All data shannon
-all_shan_div<-estimate_richness(filt_rare_phy, measures='Shannon')
-all_shan_div$`#SampleID`<- row.names(all_shan_div)
-
-# #calculate all richness (how many unique ASVs each sample had)
-#all_richness<- estimate_richness(filt_rare_phy, measures='Observed')
-# #add sample names
-#all_richness$`#SampleID`<- row.names(all_richness)
-#
-
-
 #All Richness
-richness_glom<- data.frame(diversity(glom_asv, index=))
+richness_glom<- data.frame(specnumber(glom_asv))
 
 #rename column to Shannon
-colnames(richness_glom)[1]<- 'Shannon'
+colnames(richness_glom)[1]<- 'Observed'
 
 #make column with sample id to merge with metadata
-shan_div_glom$`#SampleID`<- row.names(shan_div_glom)
+richness_glom$`#SampleID`<- row.names(richness_glom)
 
 # #for some reason it added X to the beginning of the sample names so I removed it here:
-shan_div_glom$`#SampleID`<-sub('.', '', shan_div_glom$`#SampleID`)
+richness_glom$`#SampleID`<-sub('.', '', richness_glom$`#SampleID`)
 
-
-
-# #for some reason it added X to the beginning of the sample names so I removed it here:
-all_richness$`#SampleID`<-sub('.', '', all_richness$`#SampleID`)
-# 
 # #merge with metadata
 metadata_filt<- metadata_filt %>% 
-  left_join(all_richness, by='#SampleID') %>% 
-  filter(!is.na(Observed))
+  left_join(richness_glom, by='#SampleID') 
 
 # all inverse simpson
-all_simpson<- estimate_richness(filt_rare_phy, measures='InvSimpson')
-all_simpson$`#SampleID`<- row.names(all_simpson)
+simp_glom<- data.frame(diversity(glom_asv, index='invsimpson'))
+simp_glom$`#SampleID`<- row.names(simp_glom)
+
+colnames(simp_glom)[1]<- 'InvSimpson'
+simp_glom$`#SampleID`<-sub('.', '', simp_glom$`#SampleID`)
 
 metadata_filt<- metadata_filt %>% 
-  left_join(all_simpson, by='#SampleID')
+  left_join(simp_glom, by='#SampleID')
 
 # all Pielou evenness
-metadata_filt$Pielou<- metadata_filt$Shannon/ log(19972)
+metadata_filt$Pielou<- metadata_filt$Shannon/ log(637) #divide by the number of things used to calculate shannons, aka number of genera
 
 #add elevation
 #format latrine names
@@ -288,25 +274,7 @@ waypoints$latrine<- paste("L", waypoints$latrineF, sep='')
 metadata_filt<- metadata_filt %>% 
   left_join(waypoints, by='latrine') 
 
-#also make an elevation reference column that is elevation from a certain point
-min(metadata_filt$elevation)
-metadata_filt$elevation_ref<- (metadata_filt$elevation-5100)
-#instead of true elevation, this is elevation from 5100m
-
-#format slope and aspect data to be merged
-slope_aspect$latrine<- slope_aspect$Latrine
-#join them together
-metadata_filt<- metadata_filt %>% 
-  left_join(slope_aspect, by='latrine')
-
-#add Vicugna RAI to metadata
-metadata_filt<-metadata_filt %>% 
-  left_join(vicugnaRAI, by='latrine') %>% 
-  dplyr::select(-c(Species, Effort, n_all, n_IE, RAI_all))
-
-
-
-###### 4. Diversity Analysis [AT THE ASV level]
+###### 4. Diversity Analysis [AT THE ASV level]----
 
 ## NECESSARY Calculate Diversity 
 ### 4a. Calculate diversity
@@ -396,7 +364,7 @@ Wel_sd<-sd(metadata_wet$elevation)
 
 ### Richness ----
 #wet season richness using the reference elevation
-m_wet_richNB<- glmer.nb(Observed~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet, na.action='na.fail')
+m_wet_richNB<- lmer(Observed.y~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet, na.action='na.fail')
 summary(m_wet_richNB)
 Anova(m_wet_richNB, type='III')
 emmeans(m_wet_richNB, pairwise~treatment*soilAge)
