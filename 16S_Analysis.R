@@ -364,10 +364,10 @@ Wel_sd<-sd(metadata_wet$elevation)
 
 ### Richness ----
 #wet season richness, poisson model bc not overdispersed
-m_wet_richNB<- glmer(Observed~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet, na.action='na.fail', family=poisson(link='log'))
-summary(m_wet_richNB)
-Anova(m_wet_richNB, type='III')
-emmeans(m_wet_richNB, pairwise~treatment*soilAge)
+m_wet_rich<- lmer(Observed~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
+summary(m_wet_rich)
+Anova(m_wet_rich, type='III')
+qqnorm(residuals(m_wet_rich))
 
 #use exp to backtransform bc on log scale
 #the coefficients work exactly how we'd expect. at low elevations, controls are move diverse but than
@@ -592,9 +592,10 @@ metaDryRGM_both<-metaDryRGM_both %>%
   mutate(elevation_sc=scale(elevation))
 
 #richness
-m_dry_richNB<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both,family=poisson(link='log'))
+m_dry_rich<- lmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
 summary(m_dry_richNB)
 Anova(m_dry_richNB, type='III')
+qqnorm(residuals(m_dry_rich))
 
 #Shannon
 m_dry_shan<- lmer(Shannon~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
