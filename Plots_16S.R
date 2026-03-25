@@ -329,6 +329,7 @@ ggplot(metaDryRGM_both, aes(treatment, Observed)) +
 
 
 
+
 ## PCoA plot----
 # requires that you run the NECESSARY steps under Beta Diversity to get the 
 # subsetted wet and rgm data files
@@ -545,15 +546,15 @@ PCoArgmD<-ggplot(metaDryRGM2, aes(axis01, axis02)) +
   geom_polygon(data = micro.hullsRGMD, 
                aes(colour = treatment, fill = treatment), alpha = 0.1, show.legend = F) +
   geom_point(size = 3, alpha=.5, aes(color=treatment)) +
-  geom_point(data=simpscorDrgm, aes(x=V1, y=V2), shape=3, size=2)+
-  geom_segment(data=simpscorDrgm, aes(x=0, xend=V1, y=0, yend=V2), arrow=arrow(length=unit(.3, units='cm')), alpha=.8, linewidth=.2)+
-  annotate(geom="text", x=simpscorDrgm$V1, y=simpscorDrgm$V2, label=simpDrgm_plottaxa,
-           color="black") +
+  #geom_point(data=simpscorDrgm, aes(x=V1, y=V2), shape=3, size=2)+
+  #geom_segment(data=simpscorDrgm, aes(x=0, xend=V1, y=0, yend=V2), arrow=arrow(length=unit(.3, units='cm')), alpha=.8, linewidth=.2)+
+  #annotate(geom="text", x=simpscorDrgm$V1, y=simpscorDrgm$V2, label=simpDrgm_plottaxa,
+  #         color="black") +
   scale_color_manual(labels=c('Control', 'Latrine'), values=c('cyan3','purple3'))+
   scale_fill_manual(values=c('cyan3','purple3'))+
   xlab("PCoA 1") +
   ylab("PCoA 2") +
-  labs(colour = "Treatment", title='RGM Dry', subtitle='top 5 Simper') +
+  labs(colour = "Treatment", title='RGM Dry', subtitle='') +
   theme_bw() +
   theme
 PCoArgmD
