@@ -658,7 +658,91 @@ plot_horiz.dendrogram(dendrgmD, side=F)
 rgmDlab<-labels(dendrgmD)
 
 
+### plot ts heatmap code----
+#I had to change the code because the mutate_() function doesn't work anymore and R will
+#no longer ignore it and then it wasn't working so I had to remove a ~ that they had inthe code
+#but basically I had to manually make this function instead of using the mctoolsr one to make the heatmaps
+plot_ts_heatmap = function(tax_table, metadata_map, min_rel_abund, type_header,
+                           scale_by = 'all', custom_sample_order,
+                           rev_taxa = FALSE, custom_taxa_order, other_label,
+                           remove_other = FALSE,
+                           colors = c('blue', 'white', 'red')) {
+  # group all taxa lower than threshold into other
+  lt_thresh = tax_table[rowMeans(tax_table) < min_rel_abund,]
+  gt_thresh = tax_table[rowMeans(tax_table) >= min_rel_abund,]
+  Other = colSums(lt_thresh)
+  sumtax_mod = rbind(gt_thresh, Other = Other)
+  # remove other
+  if (remove_other) {
+    sumtax_mod = sumtax_mod[row.names(sumtax_mod) != 'Other',]
+  }
+  if (!missing(other_label)) {
+    row.names(sumtax_mod)[row.names(sumtax_mod) == 'Other'] = other_label
+  }
+  # get means
+  sumtax_smry = taxa_summary_by_sample_type(sumtax_mod, metadata_map,
+                                            type_header, smry_fun = mean)
+  sumtax_smry = round(sumtax_smry * 100, 1)
+  melted = reshape2::melt(sumtax_smry)
+  if (scale_by == 'sample_types') {
+    to_plot = dplyr::mutate(dplyr::group_by(melted, "Var2"),
+                             scaled =  scales::rescale(value))
+  } else if (scale_by == 'taxa') {
+    to_plot = dplyr::mutate(dplyr::group_by(melted, "Var1"),
+                             scaled =  scales::rescale(value))
+  } else if (scale_by == 'all') {
+    to_plot = dplyr::mutate(melted, scaled =  scales::rescale(value))
+  } else
+    stop("scale_by must be one of: 'sample_types', 'taxa' or 'all'.")
+  if (!missing(custom_sample_order)) {
+    to_plot$Var2 = factor(to_plot$Var2, levels = rev(custom_sample_order))
+  }
+  if (!missing(custom_taxa_order)) {
+    to_plot$Var1 = factor(to_plot$Var1, levels = custom_taxa_order)
+  }
+  # reverse order of taxa
+  if (rev_taxa) {
+    to_plot$Var1 = factor(to_plot$Var1, levels = rev(unique(to_plot$Var1)))
+  }
+  # plot
+  # https://learnr.wordpress.com/2010/01/26/ggplot2-quick-heatmap-plotting/
+  p = ggplot2::ggplot(to_plot, ggplot2::aes_string("Var1", "Var2", 
+                                                   fill = "scaled")) +
+    ggplot2::geom_tile(color = 'black', size = 0.25) +
+    ggplot2::scale_fill_gradientn(colours = colors,
+                                  values = c(
+                                    min(to_plot$scaled),
+                                    mean(to_plot$scaled),
+                                    max(to_plot$scaled)
+                                  )) +
+    ggplot2::xlab('') + ggplot2::ylab('') +
+    ggplot2::theme(
+      legend.position = 'none',
+      axis.ticks = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(
+        angle = 90,
+        hjust = 1, vjust = 0.25
+      ),
+      axis.text = ggplot2::element_text(color = 'gray20')
+    ) +
+    ggplot2::geom_text(data = to_plot, ggplot2::aes_string(label = "value"), 
+                       size = 3) +
+    ggplot2::scale_x_discrete(expand = c(0, 0)) +
+    ggplot2::scale_y_discrete(expand = c(0, 0))
+  p
+}
 
+#' @title Collapse taxonomy dataframe to character vector
+#' @description A quick way to get taxonomy strings for each taxon
+#' @param taxonomy_df The dataframe containing taxonomy as loaded by
+#'   \code{\link{load_taxa_table}}.
+#' @concept Taxonomy-based analyses
+#' @examples 
+#' collapse_taxonomy(fruits_veggies$taxonomy_loaded)
+collapse_taxonomy = function(taxonomy_df) {
+  apply(taxonomy_df, 1, function(x)
+    paste0(x, collapse = '; '))
+}
 
 ###############heatmap----
 
@@ -697,7 +781,7 @@ metalia2$latrine_trt<- factor(metalia2$latrine_trt, levels=LIAlab)
 png("F:\\Research\\Plots\\liaheat2.pdf", units = "in", width = 10, height = 5, res = 600) 
 
 dev.off()
-heatlia<-plot_ts_heatmap(Phy_relabLt, metalia2, 0.01, "latrine_trt", colors=c('#e4daed', '#61298f')) +
+heatlia<-plot_ts_heatmap(Phy_relabLt, metalia2, 0.01, "latrine_trt", colors=c('#fcfdbf','#b73779', '#403c3c')) +
   theme(axis.text.y = element_text(size = 12, hjust = 0,
                                    margin = margin(c(0,-1,0,0))),
         axis.text.x = element_text(size = 10, angle = 30, hjust = 1, vjust = 1,
@@ -799,7 +883,7 @@ metaDryRGM2$latrine_trt<- factor(metaDryRGM2$latrine_trt, levels=rgmDlab)
 
 
 #plot it
-plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#e4daed','#61298f')) +
+plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf','#b73779', '#403c3c')) +
   theme(axis.text.y = element_text(size = 12, hjust = 0,
                                    margin = margin(c(0,-1,0,0))),
         axis.text.x = element_text(size = 10, angle = 30, hjust = 1, vjust = 1,

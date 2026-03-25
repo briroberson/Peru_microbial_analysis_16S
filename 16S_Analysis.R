@@ -1158,7 +1158,7 @@ RGM2_phy_ASV<- filt_rare_rep2%>%
 #order samples
 sampR<- sample_data(RGM2_phy_ASV) #pull out data from phyloseq
 
-metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$SampleID, row.names(sampR))), ]
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
 
 #make season a factor
 rgm2_sampdata<- sample_data(RGM2_phy_ASV)
@@ -1366,9 +1366,9 @@ rgmWetTreatmentDA<-ancombc2(data = rgmW_rep2_phy, tax_level = "Genus",
 #put primary results in data frame
 rgmWetT_prim<-rgmWetTreatmentDA$res
 
-#save it as an rds file
-saveRDS(rgmWetT_prim, file='rgmWetT_prim.rds')
-rgmWetT_prim<-readRDS('rgmWetT_prim.rds')
+#save it as an rds file, change for Genus or not genus level
+saveRDS(rgmWetT_prim, file='GenusrgmWetT_prim.rds')
+rgmWetT_prim<-readRDS('GenusrgmWetT_prim.rds') #Genus lvl or not
 
 #filter for what's significant
 rgmWetTSig<-rgmWetT_prim %>% 
@@ -1482,8 +1482,8 @@ rgmDryTreatmentDA<-ancombc2(data = rgmD_rep2_phy, tax_level = "Genus",
 rgmDryT_prim<-rgmDryTreatmentDA$res
 
 #save it as an rds file
-saveRDS(rgmDryT_prim, file='rgmDryT_prim.rds')
-rgmDryT_prim<-readRDS('rgmDryT_prim.rds')
+saveRDS(rgmDryT_prim, file='GenusrgmDryT_prim.rds')
+rgmDryT_prim<-readRDS('GenusrgmDryT_prim.rds')
 
 #filter for what's significant
 rgmDryTSig<-rgmDryT_prim %>% 
@@ -1521,7 +1521,7 @@ fig_rgmDryT = rgmDryT_DAplot %>%
   theme_bw() + 
   theme(plot.title = element_text(hjust = 0.5),
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle=60, hjust=1))
+        axis.text.x = element_blank())
 fig_rgmDryT
 
 #do the test at the phylum level
@@ -1546,11 +1546,11 @@ rgmDry_phylumSig<- rgmDry_phylum_prim %>%
 ## LIA vs RGM Control but using only 4 rgm locations that we chose based on location and availability----
 ##51,60,56,58
 #get the phyloseq with regular asv names
-wet2_phy_ASV<- filt_rare_phy%>% 
+wet2_phy_ASV<- filt_rare_phy_16s%>% 
   subset_samples(month.collected %in% ('wet')) %>% 
   subset_samples(replicate %in% (2)) 
 
-## make our test variables factors
+## make our tesfilt_rare_phy_16s## make our test variables factors
 wet2_sampdata<- sample_data(wet2_phy_ASV)
 wet2_sampdata$soilAge<- as.factor(wet2_sampdata$soilAge)
 wet2_phy_ASV@sam_data<- wet2_sampdata
@@ -1600,7 +1600,7 @@ LIA_phylum_DA<- wet2_phy_ASV %>%
 #run the test
 soilAgeDAPhylum<-ancombc2(data = LIA_phylum_DA, tax_level = "Phylum",
                     fix_formula = "treatment", rand_formula =NULL,
-                    p_adj_method = "BH", pseudo_sens = TRUE,
+                    p_adj_method = "holm", pseudo_sens = TRUE,
                     prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
                     group = "treatment", struc_zero = T, neg_lb = T,
                     alpha = 0.05, n_cl = 2, verbose = TRUE,
