@@ -457,9 +457,9 @@ metaWetRGM_both<-metaWetRGM_both %>%
   mutate(elevation_sc=scale(elevation))
 
 #richness
-m_WetRGM_richNB<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaWetRGM_both, family=poisson(link='log'))
-summary(m_WetRGM_richNB)
-Anova(m_WetRGM_richNB, type='III')
+m_WetRGM_rich<- lmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaWetRGM_both)
+summary(m_WetRGM_rich)
+Anova(m_WetRGM_rich, type='III')
 
 #Shannon
 m_WetRGM_shan<- lmer(Shannon~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaWetRGM_both)
