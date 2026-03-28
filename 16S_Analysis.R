@@ -285,27 +285,27 @@ metadata <- metadata %>%
   rename(SampleID = `#SampleID`)
 
 # ### All data shannon
-all_shan_div<-estimate_richness(filt_rare_phy, measures='Shannon')
-all_shan_div$SampleID<- row.names(all_shan_div)
+all_shan_div<-estimate_richness(filt_rare_phy_16s, measures='Shannon')
+all_shan_div$`#SampleID`<- row.names(all_shan_div)
 
 #merge with the metadata so we can run a model and filter out the stuff already filtered out
 
 metadata_filt<-metadata %>%
-  left_join(all_shan_div, by='SampleID') %>%
+  left_join(all_shan_div, by='#SampleID') %>%
   filter(!is.na(Shannon))
 
 
 #doesn't like non-integers from rarefaction averaging, so calc richness with vegan specnumber() 
-otu_mat <- as(otu_table(filt_rare_phy), "matrix") 
-if(taxa_are_rows(filt_rare_phy)) {otu_mat <- t(otu_mat)} #transpose
+otu_mat <- as(otu_table(filt_rare_phy_16s), "matrix") 
+if(taxa_are_rows(filt_rare_phy_16s)) {otu_mat <- t(otu_mat)} #transpose
 
 richness <- specnumber(otu_mat) #calculate richness
-sample_ids <- sample_names(filt_rare_phy) #grab samp IDs
-all_richness <- data.frame(SampleID = sample_ids, Observed = richness)
-
+sample_ids <- sample_names(filt_rare_phy_16s) #grab samp IDs
+all_richness <- data.frame(`#SampleID` = sample_ids, Observed = richness)
+all_richness <- all_richness %>% dplyr::rename(`#SampleID`= X.SampleID)
 # #merge with metadata
 metadata_filt<- metadata_filt %>% 
-  left_join(all_richness, by='SampleID') %>% 
+  left_join(all_richness, by='#SampleID') %>% 
   filter(!is.na(Observed))
 
 # all inverse simpson
@@ -593,8 +593,8 @@ metaDryRGM_both<-metaDryRGM_both %>%
 
 #richness
 m_dry_rich<- lmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
-summary(m_dry_richNB)
-Anova(m_dry_richNB, type='III')
+summary(m_dry_rich)
+Anova(m_dry_rich, type='III')
 qqnorm(residuals(m_dry_rich))
 
 #Shannon
@@ -625,8 +625,9 @@ Anova(m_dryRGM_shanRAI)
 qqnorm(residuals(m_dryRGM_shanRAI))
 
 
+
 # Beta Diversity ----
-##### 5. Beta Diversity analysis
+##### 5. Beta Diversity analysis ASV LEVEL
 
 ############## This step is neccessary 
 ### NECESSARY Reroot the tree.----
@@ -1727,3 +1728,554 @@ sum(soilAgeCC_simp_taxa1$average)
 ## i need to do this for multiple taxa but im not sure how to simplify the process
 # and not have to do it 1 by 1 for each taxa. and we could show multiple comparisons on 
 # the plot so there is more going on but that makes the process even longer
+
+
+
+
+
+# Beta Diversity GENUS LEVEL----
+##### 5. Beta Diversity analysis
+
+############## This step is neccessary 
+### NECESSARY Reroot the tree.----
+# 5a. Reroot the tree
+#It has to be binary but now it is not since we trimmed it
+ps_tree_genus<- phy_tree(phy_noNA_genus_glom) #put tree into an object
+is.binary(ps_tree_genus) #asking if it is binary. if false, go to next step
+
+## NOT NECESSARY Compare subsamples (replicates) Permanova----
+
+###permanova for replicates 1 and 2 to see if they differ
+
+#factor the variables
+metadata_factored<- metadata_filt
+metadata_factored$replicate<- as.factor(metadata_factored$replicate)
+metadata_factored$latrine_trt<- as.factor(metadata_factored$latrine_trt)
+
+#reorder the metadata to match the order of the phyloseq
+sampr<- sample_data(phy_noNA_genus_glom) #pull out data from phyloseq
+
+#order metadata to match that from phyloseq
+metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$`#SampleID`, row.names(sampr))), ]
+
+set.seed(200)
+#run permanova
+#permanova<- adonis2(distance(filt_rare_phy, method='wunifrac')~replicate, data=metadata_factored_rep, by='terms')
+#permanova
+
+#new way so that it is testing replicate but within each latrine. we think this is the proper way to test replicate variation
+perm_rep<- adonis2(distance(phy_noNA_genus_glom, method='wunifrac')~replicate*latrine_trt, data=metadata_factored_rep, by='terms')
+perm_rep
+
+
+
+## NECESSARY Run this step to get filtered phyloseq that is used for beta diversity----
+# 5b. Change ASV names 
+metadata_factored<- metadata_filt
+metadata_factored$treatment<- as.factor(metadata_factored$treatment)
+metadata_factored$soilAge<- as.factor(metadata_factored$soilAge)
+metadata_factored$`month-collected`<- as.factor(metadata_factored$`month-collected`)
+metadata_factored$trt_month<- as.factor(metadata_factored$trt_month)
+metadata_factored$trt_soilAge<- as.factor(metadata_factored$trt_soilAge)
+
+## they weren't different so we are going to choose just replicate 2 from the data
+##because having 2 is pseudoreplication
+##you could choose replicate 1, or randomly sample, whatever you want
+filt_rare_rep2<- subset_samples(phy_noNA_genus_glom, replicate %in% (2))
+
+#### make a dataframe that has the original and new asv names for convenience
+## the original names are a random long string of characters so this makes them easier
+## to reference and the data frame saves the original and new name so we know what's what
+
+#pull out taxa table
+taxa<- as.data.frame(tax_table(filt_rare_rep2))
+#pull out the tree
+tree<- phy_tree(filt_rare_rep2)
+#make sure tips are in same order as taxa
+sum(tree$tip.label==row.names(taxa)) 
+#if using replicate 2, it should print 28372 (because that's how many asvs there are
+## and so that tells us that the tree tips are in the same order of the taxa table)
+
+#put original names into df
+#use both_names to look up the original qiime2 asv name
+both_names<- data.frame(original=rownames(taxa))
+#rename asvs in taxa table and add to df
+rownames(taxa)<- paste('ASV', seq(1,637,1), sep='_')
+both_names$number<- rownames(taxa)
+#take out asv table and rename that too
+asvfull<- otu_table(filt_rare_rep2)
+rownames(asvfull)<- paste('ASV', seq(1,637,1), sep='_')
+#convert them into matrix to put back into phyloseq
+tax<- tax_table(as.matrix(taxa))
+otu<- otu_table(as.matrix(asvfull), taxa_are_rows = T)
+sample<- sample_data(filt_rare_rep2)
+#rename the tree tips too
+tree$tip.label<- paste('ASV', seq(1,637,1), sep='_')
+
+#put all this back into phyloseq so ASVs now have a normal number name
+rep2_named_phy<- phyloseq(otu, tax, sample, tree)
+#this is the phyloseq we will use
+
+
+## NECESSARY Subset for Wet season ----
+# 5c. Subset wet data
+#make metadata. make sure that of the samples that were rarefied out, they don't belong to the replicate
+# that is being chosen for the beta diversity stuff. so here, L70 control wet rep 1 was dropped when we 
+# rarefied so if we choose replicate 1, there is no L70 control wet representation in our data so
+#we have to make sure it is chosen
+metadata_wet2<- metadata_factored %>% 
+  filter(`month-collected`=='wet' & replicate==2)
+
+#filter the phyloseq for only wet samples
+filt_rare_wet2<- subset_samples(rep2_named_phy, `month.collected` %in% ('wet'))
+
+#reorder the metadata to match the order of the phyloseq
+samp<- sample_data(filt_rare_wet2) #pull out data from phyloseq
+
+metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$`#SampleID`, row.names(samp))), ]
+
+
+## NECESSARY Subset for RGM data----
+# 5d. Subset RGM data
+#metadata factored
+metadata_RGM2<- metadata_factored %>% 
+  filter(soilAge=='rgm', replicate==2) 
+
+#make phyloseq for RGM only
+filt_rare_RGM2<- rep2_named_phy%>% 
+  subset_samples(soilAge %in% ('rgm')) %>% 
+  subset_samples(replicate %in% (2)) 
+
+#order samples
+sampR<- sample_data(filt_rare_RGM2) #pull out data from phyloseq
+
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
+
+
+
+## Wet Subset Permanova ----
+### 5e. Permanova test with wet season data
+set.seed(200) ###VERY IMPORTANT, always keep the same
+
+#run permanova
+permanova_wet<- adonis2(distance(filt_rare_wet2, method='wunifrac')~treatment*soilAge, data=metadata_wet2, by='terms')
+permanova_wet
+
+#pairwise permanova to see which groups are different from each other
+permanova_pairwise(distance(filt_rare_wet2, method='wunifrac'), grp=metadata_wet2$trt_soilAge)
+
+# see Plots_16S file for code to make plots
+
+#beta dispersion
+wet_betadis<-betadisper(distance(filt_rare_wet2, method='wunifrac'), group=metadata_wet2$trt_soilAge, type='median')
+adonis2(dist(wet_betadis$distances)~metadata_wet2$trt_soilAge)
+boxplot(wet_betadis)
+
+permutest(wet_betadis, permutations=999)
+
+permanova_pairwise(dist(wet_betadis$distances), grp=metadata_wet2$trt_soilAge)
+
+## RGM Subset Permanova----
+# 5f. RGM Permanova
+set.seed(200)
+#permanova
+permanova_rgm<- adonis2(distance(filt_rare_RGM2, method='wunifrac')~treatment*`month-collected`, data=metadata_RGM2, by='terms')
+permanova_rgm
+
+#pairwise permanova to see which groups are different
+permanova_pairwise(distance(filt_rare_RGM2, method='wunifrac'), grp=metadata_RGM2$trt_month)
+
+
+### see Plots_16S file for code on how to make the plots
+
+## Dry RGM Permanova----
+filt_dryRGM2<- subset_samples(filt_rare_RGM2, `month.collected` %in% ('dry'))
+metaDryRGM2<- metadata_RGM2 %>% 
+  filter(`month-collected`=='dry') 
+
+#order samples
+sampRd<- sample_data(filt_dryRGM2) #pull out data from phyloseq
+
+metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$`#SampleID`, row.names(sampRd))), ]
+
+set.seed(200)
+#permanova
+permanova_rgmD<- adonis2(distance(filt_dryRGM2, method='wunifrac')~treatment, data=metaDryRGM2, by='terms')
+permanova_rgmD
+
+#beta dispersion
+dryRGM_betadis<-betadisper(distance(filt_dryRGM2, method='wunifrac'), group=metaDryRGM2$treatment, type='median')
+adonis2(dist(dryRGM_betadis$distances)~metaDryRGM2$treatment)
+boxplot(dryRGM_betadis)
+permutest(dryRGM_betadis)
+
+
+# Differential Abundance----
+## Wet RGM Latrine vs Control DA----
+
+RGM2_phy_ASV<- filt_rare_rep2%>% 
+  subset_samples(soilAge %in% ('rgm')) %>% 
+  subset_samples(replicate %in% (2)) 
+
+#order samples
+sampR<- sample_data(RGM2_phy_ASV) #pull out data from phyloseq
+
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
+
+#make season a factor
+rgm2_sampdata<- sample_data(RGM2_phy_ASV)
+
+#factor treatment
+rgm2_sampdata$treatment<- as.factor(rgm2_sampdata$treatment)
+RGM2_phy_ASV@sam_data<- rgm2_sampdata
+str(RGM2_phy_ASV@sam_data)
+
+rgmW_rep2_phy<- subset_samples(RGM2_phy_ASV, month.collected=='wet')
+
+# test with just rep 2 and no RE
+rgmWetTreatmentDA<-ancombc2(data = rgmW_rep2_phy, tax_level = "Genus",
+                            fix_formula = "treatment", rand_formula = NULL,
+                            p_adj_method = "holm", pseudo_sens = TRUE,
+                            prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
+                            group = "treatment", struc_zero = TRUE, neg_lb = TRUE,
+                            alpha = 0.05, n_cl = 2, verbose = TRUE,
+                            global = TRUE, pairwise = TRUE, dunnet = TRUE, trend = F,
+                            iter_control = list(tol = 1e-2, max_iter = 20, 
+                                                verbose = TRUE),
+                            em_control = list(tol = 1e-5, max_iter = 100),
+                            lme_control = lme4::lmerControl(),
+                            mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
+
+#put primary results in data frame
+rgmWetT_prim<-rgmWetTreatmentDA$res
+
+#save it as an rds file, change for Genus or not genus level
+saveRDS(rgmWetT_prim, file='GenusrgmWetT_prim.rds')
+rgmWetT_prim<-readRDS('GenusrgmWetT_prim.rds') #Genus lvl or not
+
+#filter for what's significant
+rgmWetTSig<-rgmWetT_prim %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T)
+
+#extract taxa from phyloseq
+rgmWet_taxa<- data.frame(tax_table(rgmW_rep2_phy))
+
+#filter for the first genus that is significant to see how many ASVs there are
+rgmWet_taxa %>% 
+  filter(Genus=='Iamia')
+
+# Plot log fold change
+rgmWetT_DAplot<- rgmWetTSig %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T) %>% 
+  dplyr::arrange(desc(lfc_treatmentlatrine)) %>% 
+  dplyr::mutate(direct = ifelse(lfc_treatmentlatrine> 0, "Positive LFC", "Negative LFC"))
+
+#make taxon and direction factors
+rgmWetT_DAplot$taxon<- factor(rgmWetT_DAplot$taxon, levels=rgmWetT_DAplot$taxon)
+rgmWetT_DAplot$direct<- factor(rgmWetT_DAplot$direct, levels = c("Positive LFC", "Negative LFC"))
+
+
+fig_rgmWetT = rgmWetT_DAplot %>%
+  ggplot(aes(x = taxon, y = lfc_treatmentlatrine, fill=direct)) + 
+  geom_bar(stat = "identity", width = 0.7, color = "black", 
+           position = position_dodge(width = 0.4)) +
+  scale_fill_manual(values=c('purple3', 'cyan3'), name=NULL, labels=c('Positive LFC (more in latrine)','Negative LFC (more in control)'))+
+  geom_errorbar(aes(ymin = lfc_treatmentlatrine - se_treatmentlatrine, ymax = lfc_treatmentlatrine + se_treatmentlatrine), 
+                width = 0.2, position = position_dodge(0.05), color = "black") + 
+  labs(x = NULL, y = "Log fold change", 
+       title = "Wet season Latrine vs Control") + 
+  scale_color_discrete(name = NULL) +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_blank())
+fig_rgmWetT
+
+#do the test at the phylum level
+rgmWetTDA_phylum<-ancombc2(data = rgmW_rep2_phy, tax_level = "Phylum",
+                           fix_formula = "treatment", rand_formula = NULL,
+                           p_adj_method = "holm", pseudo_sens = TRUE,
+                           prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
+                           group = "treatment", struc_zero = TRUE, neg_lb = TRUE,
+                           alpha = 0.05, n_cl = 2, verbose = TRUE,
+                           global = TRUE, pairwise = TRUE, dunnet = TRUE, trend = F,
+                           iter_control = list(tol = 1e-2, max_iter = 20, 
+                                               verbose = TRUE),
+                           em_control = list(tol = 1e-5, max_iter = 100),
+                           lme_control = lme4::lmerControl(),
+                           mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
+
+rgmWet_phylum_prim<- rgmWetTDA_phylum$res
+
+rgmWet_phylumSig<- rgmWet_phylum_prim %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T)
+
+# Plot log fold change
+rgmWetphylum_DAplot<- rgmWet_phylumSig %>% 
+  dplyr::arrange(desc(lfc_treatmentlatrine)) %>% 
+  dplyr::mutate(direct = ifelse(lfc_treatmentlatrine> 0, "Positive LFC", "Negative LFC"))
+
+#make taxon and direction factors
+rgmWetphylum_DAplot$taxon<- factor(rgmWetphylum_DAplot$taxon, levels=rgmWetphylum_DAplot$taxon)
+rgmWetphylum_DAplot$direct<- factor(rgmWetphylum_DAplot$direct, levels = c("Positive LFC", "Negative LFC"))
+
+fig_rgmWetphylum = rgmWetphylum_DAplot %>%
+  ggplot(aes(x = taxon, y = lfc_treatmentlatrine, fill=direct)) + 
+  geom_bar(stat = "identity", width = 0.7, color = "black", 
+           position = position_dodge(width = 0.4)) +
+  geom_errorbar(aes(ymin = lfc_treatmentlatrine - se_treatmentlatrine, ymax = lfc_treatmentlatrine + se_treatmentlatrine), 
+                width = 0.2, position = position_dodge(0.05), color = "black") + 
+  labs(x = NULL, y = "Log fold change", 
+       title = "Log fold changes") + 
+  scale_fill_discrete(name = NULL) +
+  scale_color_discrete(name = NULL) +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(hjust=1, angle=90))
+fig_rgmWetphylum
+
+## Dry RGM Latrine vs Control----
+
+#got the phyloseq from the latrine by season step
+
+#make treatment a factor
+rgm2_sampdata$treatment<- as.factor(rgm2_sampdata$treatment)
+RGM2_phy_ASV@sam_data<- rgm2_sampdata
+str(RGM2_phy_ASV@sam_data)
+
+#make it just for the dry samples
+rgmD_rep2_phy<- subset_samples(RGM2_phy_ASV, month.collected=='dry')
+
+# test with just rep 2 and no RE
+rgmDryTreatmentDA<-ancombc2(data = rgmD_rep2_phy, tax_level = "Genus",
+                            fix_formula = "treatment", rand_formula = NULL,
+                            p_adj_method = "holm", pseudo_sens = TRUE,
+                            prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
+                            group = "treatment", struc_zero = TRUE, neg_lb = TRUE,
+                            alpha = 0.05, n_cl = 2, verbose = TRUE,
+                            global = TRUE, pairwise = F, dunnet = F, trend = F,
+                            iter_control = list(tol = 1e-2, max_iter = 20, 
+                                                verbose = TRUE),
+                            em_control = list(tol = 1e-5, max_iter = 100),
+                            lme_control = lme4::lmerControl(),
+                            mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
+
+#put primary results in data frame
+rgmDryT_prim<-rgmDryTreatmentDA$res
+
+#save it as an rds file
+saveRDS(rgmDryT_prim, file='GenusrgmDryT_prim.rds')
+rgmDryT_prim<-readRDS('GenusrgmDryT_prim.rds')
+
+#filter for what's significant
+rgmDryTSig<-rgmDryT_prim %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T)
+
+#extract taxa from phyloseq
+rgmDry_taxa<- data.frame(tax_table(rgmD_rep2_phy))
+
+#filter for the first genus that is significant to see how many ASVs there are
+rgmDry_taxa %>% 
+  filter(Genus=='Flavobacterium') %>% 
+  count()
+
+# Plot log fold change
+rgmDryT_DAplot<- rgmDryTSig %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T) %>% 
+  dplyr::arrange(desc(lfc_treatmentlatrine)) %>% 
+  dplyr::mutate(direct = ifelse(lfc_treatmentlatrine> 0, "Positive LFC", "Negative LFC"))
+
+#make taxon and direction factors
+rgmDryT_DAplot$taxon<- factor(rgmDryT_DAplot$taxon, levels=rgmDryT_DAplot$taxon)
+rgmDryT_DAplot$direct<- factor(rgmDryT_DAplot$direct, levels = c("Positive LFC", "Negative LFC"))
+
+
+fig_rgmDryT = rgmDryT_DAplot %>%
+  ggplot(aes(x = taxon, y = lfc_treatmentlatrine, fill=direct)) + 
+  geom_bar(stat = "identity", width = 0.7, color = "black", 
+           position = position_dodge(width = 0.4)) +
+  scale_fill_manual(values=c('purple3', 'cyan3'), name=NULL, labels=c('Positive LFC (more in latrine)','Negative LFC (more in control)'))+
+  geom_errorbar(aes(ymin = lfc_treatmentlatrine - se_treatmentlatrine, ymax = lfc_treatmentlatrine + se_treatmentlatrine), 
+                width = 0.2, position = position_dodge(0.05), color = "black") + 
+  labs(x = NULL, y = "Log fold change", 
+       title = "Dry Latrine vs Control") + 
+  scale_color_discrete(name = NULL) +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(hjust=.5, angle=60))
+fig_rgmDryT
+
+#do the test at the phylum level
+rgmDryTDA_phylum<-ancombc2(data = rgmD_rep2_phy, tax_level = "Phylum",
+                           fix_formula = "treatment", rand_formula = NULL,
+                           p_adj_method = "holm", pseudo_sens = TRUE,
+                           prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
+                           group = "treatment", struc_zero = TRUE, neg_lb = TRUE,
+                           alpha = 0.05, n_cl = 2, verbose = TRUE,
+                           global = TRUE, pairwise = TRUE, dunnet = TRUE, trend = F,
+                           iter_control = list(tol = 1e-2, max_iter = 20, 
+                                               verbose = TRUE),
+                           em_control = list(tol = 1e-5, max_iter = 100),
+                           lme_control = lme4::lmerControl(),
+                           mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
+
+rgmDry_phylum_prim<- rgmDryTDA_phylum$res
+
+rgmDry_phylumSig<- rgmDry_phylum_prim %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T)
+
+## LIA vs RGM Control but using only 4 rgm locations that we chose based on location and availability----
+##51,60,56,58
+#get the phyloseq with regular asv names
+wet2_phy_ASV<- phy_noNA_genus_glom%>% 
+  subset_samples(month.collected %in% ('wet')) %>% 
+  subset_samples(replicate %in% (2)) 
+
+## make our test variables factors
+wet2_sampdata<- sample_data(wet2_phy_ASV)
+wet2_sampdata$soilAge<- as.factor(wet2_sampdata$soilAge)
+wet2_phy_ASV@sam_data<- wet2_sampdata
+str(wet2_phy_ASV@sam_data)
+
+#select only the 4 rgm samples we want (as well as the LIA ones)
+soilAgeCDAphy<- wet2_phy_ASV %>% 
+  subset_samples(latrine %in% c('L51','L56','L58','L60','L100','L101','L102','L104')) %>% 
+  subset_samples(treatment=='control')
+
+#run the test
+soilAgeCDA<-ancombc2(data = soilAgeCDAphy, tax_level = "Genus",
+                     fix_formula = "soilAge", rand_formula =NULL,
+                     p_adj_method = "holm", pseudo_sens = TRUE,
+                     prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
+                     group = "soilAge", struc_zero = T, neg_lb = T,
+                     alpha = 0.05, n_cl = 2, verbose = TRUE,
+                     global = TRUE, pairwise = F, dunnet = F, trend = F,
+                     iter_control = list(tol = 1e-2, max_iter = 20, 
+                                         verbose = TRUE),
+                     em_control = list(tol = 1e-5, max_iter = 100),
+                     lme_control = lme4::lmerControl(),
+                     mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
+
+soilAgeC_prim<- soilAgeCDA$res
+
+saveRDS(soilAgeC_prim, file='F:\\Research\\16S_Soil\\RDS Files\\soilAgeC_prim.rds')
+soilAgeC_prim<-readRDS('F:\\Research\\16S_Soil\\RDS Files\\soilAgeC_prim.rds')
+
+soilAgeC_sig<- soilAgeC_prim %>% 
+  filter(q_soilAgergm<.05 & passed_ss_soilAgergm==T)
+
+soilAgeC_zero<- soilAgeCDA$zero_ind
+soilAgeC_zeroLIA<- soilAgeC_zero %>% 
+  filter(`structural_zero (soilAge = lia)`==T & `structural_zero (soilAge = rgm)`==F)
+soilAgeC_zeroRGM<- soilAgeC_zero %>% 
+  filter(`structural_zero (soilAge = lia)`==F & `structural_zero (soilAge = rgm)`==T)
+
+#### LIA phylum----
+#get LIA samples
+wet2_sampdata$treatment<- as.factor(wet2_sampdata$treatment)
+wet2_phy_ASV@sam_data<- wet2_sampdata
+
+LIA_phylum_DA<- wet2_phy_ASV %>% 
+  subset_samples(soilAge== 'lia')
+
+#run the test
+soilAgeDAPhylum<-ancombc2(data = LIA_phylum_DA, tax_level = "Phylum",
+                          fix_formula = "treatment", rand_formula =NULL,
+                          p_adj_method = "holm", pseudo_sens = TRUE,
+                          prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
+                          group = "treatment", struc_zero = T, neg_lb = T,
+                          alpha = 0.05, n_cl = 2, verbose = TRUE,
+                          global = TRUE, pairwise = TRUE, dunnet = F, trend = F,
+                          iter_control = list(tol = 1e-2, max_iter = 20, 
+                                              verbose = TRUE),
+                          em_control = list(tol = 1e-5, max_iter = 100),
+                          lme_control = lme4::lmerControl(),
+                          mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
+liaDAPhylum_pair<- soilAgeDAPhylum$res
+liaDAPhylumSig<- liaDAPhylum_pair %>% 
+  filter(q_treatmentlatrine<.05 & passed_ss_treatmentlatrine==T)
+
+## Plot all 3 phylum tests in one figure----
+
+#first run the 3 different phylum level tests under the Wet L vs C, Dry L vs C, and LIA L vs C
+
+#######first process the wet season comparison
+#select just the columns of interest
+wet_phyl_fig <- rgmWet_phylum_prim %>%
+  dplyr::select(taxon, contains('latrine')) 
+
+#round LFC, choose only taxa that are significant and passed sensitivity test, make data tidy
+wet_phyl_fig_lfc <- wet_phyl_fig %>%
+  dplyr::filter(diff_treatmentlatrine == 1 & passed_ss_treatmentlatrine==T) %>%
+  dplyr::mutate(lfc1 = ifelse(diff_treatmentlatrine == 1, 
+                              round(lfc_treatmentlatrine, 2), 0)) %>%
+  tidyr::pivot_longer(cols = lfc1, 
+                      names_to = "group", values_to = "value") %>%
+  dplyr::arrange(taxon) %>% 
+  dplyr::select(group, value, taxon)
+
+# recode the group so instead of lfc1 it says what the comparison is
+wet_phyl_fig_lfc$group <- dplyr::recode(wet_phyl_fig_lfc$group, 
+                                        `lfc1` = "RGM Wet Season")
+
+###### second process dry season comparison
+dry_phyl_fig<- rgmDry_phylum_prim %>% 
+  dplyr::select(taxon, contains('latrine')) 
+
+#round LFC, choose only taxa that are significant and passed sensitivity test, make data tidy
+dry_phyl_fig_lfc <- dry_phyl_fig %>%
+  dplyr::filter(diff_treatmentlatrine == 1 & passed_ss_treatmentlatrine==T) %>%
+  dplyr::mutate(lfc1 = ifelse(diff_treatmentlatrine == 1, 
+                              round(lfc_treatmentlatrine, 2), 0)) %>%
+  tidyr::pivot_longer(cols = lfc1, 
+                      names_to = "group", values_to = "value") %>%
+  dplyr::arrange(taxon) %>% 
+  dplyr::select(group, value, taxon)
+
+# recode the group so instead of lfc1 it says what the comparison is
+dry_phyl_fig_lfc$group <- dplyr::recode(dry_phyl_fig_lfc$group, 
+                                        `lfc1` = "RGM Dry Season")
+
+##### third process the LIA comparison
+lia_phyl_fig<- liaDAPhylum_pair %>% 
+  dplyr::select(taxon, contains('latrine'))
+
+#round LFC, choose only taxa that are significant and passed sensitivity test, make data tidy
+lia_phyl_fig_lfc <- lia_phyl_fig %>%
+  dplyr::filter(diff_treatmentlatrine == 1 & passed_ss_treatmentlatrine==T) %>%
+  dplyr::mutate(lfc1 = ifelse(diff_treatmentlatrine == 1, 
+                              round(lfc_treatmentlatrine, 2), 0)) %>%
+  tidyr::pivot_longer(cols = lfc1, 
+                      names_to = "group", values_to = "value") %>%
+  dplyr::arrange(taxon) %>% 
+  dplyr::select(group, value, taxon)
+
+# recode the group so instead of lfc1 it says what the comparison is
+lia_phyl_fig_lfc$group <- dplyr::recode(lia_phyl_fig_lfc$group, 
+                                        `lfc1` = "LIA Wet Season")
+
+#join all the comparisons together
+phyl_fig<-full_join(lia_phyl_fig_lfc, wet_phyl_fig_lfc)
+phyl_fig<- full_join(dry_phyl_fig_lfc, phyl_fig) #change this to wet to make just the rgm dry and wet plot
+
+# make the figure
+lo = floor(min(phyl_fig$value))
+up = ceiling(max(phyl_fig$value))
+
+fig_phyl = phyl_fig %>%
+  ggplot(aes(x = group, y = taxon, fill = value)) + 
+  geom_tile(color = "black") +
+  scale_fill_gradient2(low = "cyan3", high = "purple3", mid = "white", 
+                       na.value = "white", midpoint = 0, limit = c(lo, up),
+                       breaks=c(4,-2), labels=c('more abundant \
+on latrines','more abundant \
+on controls')) +
+  geom_text(aes(group, taxon, label = value), size = 4) +
+  scale_color_identity(guide = "none") +
+  labs(x = NULL, y = NULL, title = 'Phylum LFC Latrine-Control') +
+  theme_classic() +
+  theme(axis.text.x=element_text(),
+        legend.title=element_blank())
+fig_phyl

@@ -616,7 +616,7 @@ distlia<- distance(filt_lia2, method='wunifrac')
 # make a dendrogram using hclust on the distance
 dendLia<- as.dendrogram(hclust(distlia, method='ward.D2'))
 #color the branches so at the first split, one split is one color and the other split is the other
-dendLia<- color_branches(dendLia, k=2, col=c("cyan3","purple3"))
+dendLia<- color_branches(dendLia, k=3, col=c("cyan3",'cyan3',"purple3"))
 col_labels<- get_leaves_branches_col(dendLia)
 col_labels <- col_labels[order(order.dendrogram(dendLia))]
 dendLia <- set(dendLia, "labels_cex", 0.8)
@@ -762,8 +762,9 @@ Phylum_abundanceL <- cast(Phylum_abundanceL, Sample ~ Phylum)
 
 #change row names to match sample
 row.names(Phylum_abundanceL)<- Phylum_abundanceL$Sample
+
 #de-select first column
-Phylum_abundanceL<- Phylum_abundanceL[,2:41]
+Phylum_abundanceL<- Phylum_abundanceL[,2:29]
 #make it a data frame bc right now it's a cast df bc we used the cast function
 Phylum_abundanceL<- as.data.frame(Phylum_abundanceL)
 
@@ -816,7 +817,7 @@ Phylum_abundanceW <- aggregate(Abundance~Sample+Phylum, datW, FUN=sum)
 Phylum_abundanceW <- cast(Phylum_abundanceW, Sample ~ Phylum)
 
 row.names(Phylum_abundanceW)<- Phylum_abundanceW$Sample
-Phylum_abundanceW<- Phylum_abundanceW[,2:41]
+Phylum_abundanceW<- Phylum_abundanceW[,2:29]
 Phylum_abundanceW<- as.data.frame(Phylum_abundanceW)
 
 
@@ -865,7 +866,7 @@ Phylum_abundanceR <- aggregate(Abundance~Sample+Phylum, datR, FUN=sum)
 Phylum_abundanceR <- cast(Phylum_abundanceR, Sample ~ Phylum)
 
 row.names(Phylum_abundanceR)<- Phylum_abundanceR$Sample
-Phylum_abundanceR<- Phylum_abundanceR[,2:40]
+Phylum_abundanceR<- Phylum_abundanceR[,2:29]
 Phylum_abundanceR<- as.data.frame(Phylum_abundanceR)
 
 
