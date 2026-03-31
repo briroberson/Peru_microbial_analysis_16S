@@ -368,6 +368,7 @@ m_wet_rich<- lmer(Observed~treatment*soilAge+elevation_sc*treatment+(1|latrine_t
 summary(m_wet_rich)
 Anova(m_wet_rich, type='III')
 qqnorm(residuals(m_wet_rich))
+emmeans(m_wet_rich, pairwise~treatment*soilAge)
 
 #use exp to backtransform bc on log scale
 #the coefficients work exactly how we'd expect. at low elevations, controls are move diverse but than
@@ -1369,8 +1370,8 @@ rgmWetTreatmentDA<-ancombc2(data = rgmW_rep2_phy, tax_level = "Genus",
 rgmWetT_prim<-rgmWetTreatmentDA$res
 
 #save it as an rds file, change for Genus or not genus level
-saveRDS(rgmWetT_prim, file='GenusrgmWetT_prim.rds')
-rgmWetT_prim<-readRDS('GenusrgmWetT_prim.rds') #Genus lvl or not
+saveRDS(rgmWetT_prim, file='rgmWetT_prim.rds')
+rgmWetT_prim<-readRDS('rgmWetT_prim.rds') #Genus lvl or not
 
 #filter for what's significant
 rgmWetTSig<-rgmWetT_prim %>% 
@@ -1409,6 +1410,17 @@ fig_rgmWetT = rgmWetT_DAplot %>%
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_blank())
 fig_rgmWetT
+
+#export the plot to a powerpoint to edit
+fig_dml<- rvg::dml(ggobj = fig_rgmWetT)
+
+pres<-officer::read_pptx("F:\\Research\\github\\Peru_microbial_analysis_16s\\16s_plots.pptx") %>%
+  # add slide 
+  officer::add_slide(layout='Blank') %>%
+  # specify object and location of object 
+  officer::ph_with(fig_dml, ph_location()) 
+print(pres, target = "F:\\Research\\github\\Peru_microbial_analysis_16s\\16s_plots.pptx") 
+
 
 #do the test at the phylum level
 rgmWetTDA_phylum<-ancombc2(data = rgmW_rep2_phy, tax_level = "Phylum",
@@ -1990,6 +2002,7 @@ fig_rgmWetT = rgmWetT_DAplot %>%
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_blank())
 fig_rgmWetT
+
 
 #do the test at the phylum level
 rgmWetTDA_phylum<-ancombc2(data = rgmW_rep2_phy, tax_level = "Phylum",
