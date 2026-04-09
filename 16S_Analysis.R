@@ -17,6 +17,7 @@ library(MASS) #for negative binomial
 library(ecole) #pairwise permanova
 library(ANCOMBC) #for differential abundance
 library(emmeans)
+library (mirlyn) #for rarefying
 
 
 # Install Packages ----
@@ -165,19 +166,74 @@ abline(v=3515)
 
 #we have looked at the curves and now decided which value to use to rarefy
 
-### 3d. Do the rarefying using the chosen value. rngseed sets the seed for us within the function
-filt_rare_phy <- rarefy_even_depth(final_filtered_phy, rngseed = 200, sample.size=3705, replace=F)
-filt_rare_phy
-final_filtered_phy
-#compare the two phyloseqs just to see and confirm that the expected number of samples were dropped
+#rarefy data
+mirl_object_500<- mirl(final_filtered_phy, libsize=3705, set.seed=200, trimOTUs=T, replace=F, rep=500)
+
+#make an empty object to put the ASV tables in
+mirl_otu_500 <- vector("list", length(mirl_object_500))
+
+#extract otu tables from each rarefied phyloseq and add to the empty object above
+for (i in 1:length(mirl_object_500)){
+  colnames(mirl_object_500[[i]]@otu_table) <- paste0(colnames(mirl_object_500[[i]]@otu_table))
+  (mirl_otu_500[[i]] <- mirl_object_500[[i]]@otu_table)
+}
+
+
+#make metadata file with the correct samples (remove ones dropped during filtering)
+sample_id<- data.frame(final_filtered_phy@sam_data) 
+sample_id$Samples<- row.names(sample_id)
+sample_id<- sample_id %>% 
+  filter(!Samples %in% c(5, 21, 127))
+
+sample_id <- sample_id$Samples
+
+#make empty list for each sample
+average_counts_500 <- vector("list", length(sample_id))
+
+#give how many reps you will do
+rep_500<-1:500
+#make empty list to hold 500 dataframes
+iter_list_500<- vector('list', length(rep_500))
+
+#loop to select columns from each rep, then average them and put them in new otu table
+for (i in 1:length(sample_id) ){
+  for (j in rep_500){
+    iter_list_500[[j]]<-dplyr::select(as.data.frame(mirl_otu_500[[j]]),i) #this selects each individual iteration's otu table and 
+    iter_list_500[[j]]$ASVname<- row.names(iter_list_500[[j]]) #this makes a column with asv names
+  }
+  
+  sample_df_500<- reduce(iter_list_500[rep_500], full_join, by='ASVname') #this combines all the iterations of a sample into one dataframe
+  sample_df_500[is.na(sample_df_500)]<-0 #make NAs into 0s
+  row.names(sample_df_500)<- sample_df_500$ASVname #make row names the ASV names
+  sample_df_500<- sample_df_500[,c(1, 3:(1+length(rep_500)))] #remove the ASV name column
+  sample_average_500 <- data.frame(rowMeans(sample_df_500)) #calculate the mean of each row (which is the avg abundance on each ASV across iterations)
+ #in this data frame, it has all the ASVs and each column is the same sample but each iteraiton of it. so sample 13, but 500 iterations.
+  #then it averages the abundance of each ASV across each iteraion of sample 13. and then repeats this for each sample.
+   colnames(sample_average_500) <- sample_id[[i]] #make the column name the sample number
+  average_counts_500[[i]] <- sample_average_500 #put into list which has an element for each sample
+}
+average_count_df_500 <- do.call(cbind, average_counts_500)
+
+write.csv(x=average_count_df_500, file="500rep_averaged_OTUtable.csv")
+
+#check that they each have the rarefied number of ASVs
+colSums(average_count_df_500)
+
+#add to phyloseq
+mirl_phyloseq <- final_filtered_phy
+mirl_phyloseq@otu_table@.Data <- as.matrix(average_count_df_500)
+
+rowSums(mirl_phyloseq@otu_table)==rowSums(average_count_df_500) #should be true
+
+
 
 # Final phyloseq (filtered and rarefied) ----
 #save the data as an R file so it doesn't have to be loaded each time.
 #now when you start R, you can load the metadata and waypoints in step 1a. and skip
 #steps 1b-3e
 
-saveRDS(filt_rare_phy, file="F:\\Research\\16S_Soil\\RDS Files\\filt_rare_phy.rds") #use whatever file path for where you want to save it
-filt_rare_phy<-readRDS("filt_rare_phy_16s.rds")
+saveRDS(mirl_phyloseq, file="filt_rare_phy_16s.rds") #use whatever file path for where you want to save it
+filt_rare_phy_16s<-readRDS("filt_rare_phy_16s.rds")
 
 
 # Alpha Diversity ----
@@ -286,12 +342,12 @@ metadata <- metadata %>%
 
 # ### All data shannon
 all_shan_div<-estimate_richness(filt_rare_phy_16s, measures='Shannon')
-all_shan_div$`#SampleID`<- row.names(all_shan_div)
+all_shan_div$`SampleID`<- row.names(all_shan_div)
 
 #merge with the metadata so we can run a model and filter out the stuff already filtered out
 
 metadata_filt<-metadata %>%
-  left_join(all_shan_div, by='#SampleID') %>%
+  left_join(all_shan_div, by='SampleID') %>%
   filter(!is.na(Shannon))
 
 
@@ -301,15 +357,15 @@ if(taxa_are_rows(filt_rare_phy_16s)) {otu_mat <- t(otu_mat)} #transpose
 
 richness <- specnumber(otu_mat) #calculate richness
 sample_ids <- sample_names(filt_rare_phy_16s) #grab samp IDs
-all_richness <- data.frame(`#SampleID` = sample_ids, Observed = richness)
-all_richness <- all_richness %>% dplyr::rename(`#SampleID`= X.SampleID)
+all_richness <- data.frame(`SampleID` = sample_ids, Observed = richness)
+all_richness <- all_richness %>% dplyr::rename(`SampleID`= X.SampleID)
 # #merge with metadata
 metadata_filt<- metadata_filt %>% 
-  left_join(all_richness, by='#SampleID') %>% 
+  left_join(all_richness, by='SampleID') %>% 
   filter(!is.na(Observed))
 
 # all inverse simpson
-all_simpson<- estimate_richness(filt_rare_phy, measures='InvSimpson')
+all_simpson<- estimate_richness(filt_rare_phy_16s, measures='InvSimpson')
 all_simpson$`SampleID`<- row.names(all_simpson)
 
 metadata_filt<- metadata_filt %>% 
@@ -330,10 +386,6 @@ waypoints$latrine<- paste("L", waypoints$latrineF, sep='')
 metadata_filt<- metadata_filt %>% 
   left_join(waypoints, by='latrine') 
 
-#also make an elevation reference column that is elevation from a certain point
-min(metadata_filt$elevation)
-metadata_filt$elevation_ref<- (metadata_filt$elevation-5111)
-#instead of true elevation, this is elevation from ~5100m
 
 #format slope and aspect data to be merged
 slope_aspect$latrine<- slope_aspect$Latrine
@@ -429,6 +481,7 @@ lrtest(m_wet_shan_div, m_wet_shan_nullI)
 m_wet_simp<-lmer(InvSimpson~treatment*soilAge+elevation_sc*treatment+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
 Anova(m_wet_simp, type='III')
 summary(m_wet_simp)
+emmeans(m_wet_simp, pairwise~treatment*soilAge)
 
 #check model assumptions
 qqnorm(residuals(m_wet_simp)) #checking normality
@@ -447,7 +500,7 @@ m_wet_pie<- lmer(logit(Pielou)~treatment*soilAge+elevation_sc*treatment+(1|latri
 Anova(m_wet_pie, type='III')
 summary(m_wet_pie)
 qqnorm(residuals(m_wet_pie))
-
+emmeans(m_wet_pie, pairwise~treatment*soilAge)
 
 ### Just RGM Wet----
 metaWetRGM_both<- metadata_filt %>% 
@@ -608,6 +661,7 @@ qqnorm(residuals(m_dry_shan))
 m_dry_simp<- lmer(InvSimpson~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
 summary(m_dry_simp)
 Anova(m_dry_simp, type='III')
+qqnorm(residuals(m_dry_simp))
 
 #Pielou
 m_dry_pie<- lmer(logit(Pielou)~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
@@ -731,7 +785,7 @@ filt_rare_wet2<- subset_samples(rep2_named_phy, `month.collected` %in% ('wet'))
 #reorder the metadata to match the order of the phyloseq
 samp<- sample_data(filt_rare_wet2) #pull out data from phyloseq
 
-metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$`#SampleID`, row.names(samp))), ]
+metadata_wet2<-metadata_wet2[ order(match(metadata_wet2$`SampleID`, row.names(samp))), ]
 
 
 ## NECESSARY Subset for RGM data----
@@ -748,7 +802,7 @@ filt_rare_RGM2<- rep2_named_phy%>%
 #order samples
 sampR<- sample_data(filt_rare_RGM2) #pull out data from phyloseq
 
-metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
+metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`SampleID`, row.names(sampR))), ]
 
 
 
@@ -1158,10 +1212,6 @@ RGM2_phy_ASV<- filt_rare_rep2%>%
   subset_samples(soilAge %in% ('rgm')) %>% 
   subset_samples(replicate %in% (2)) 
 
-#order samples
-sampR<- sample_data(RGM2_phy_ASV) #pull out data from phyloseq
-
-metadata_RGM2<-metadata_RGM2[order(match(metadata_RGM2$`#SampleID`, row.names(sampR))), ]
 
 #make season a factor
 rgm2_sampdata<- sample_data(RGM2_phy_ASV)
