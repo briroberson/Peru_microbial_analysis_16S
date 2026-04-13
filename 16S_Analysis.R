@@ -709,7 +709,7 @@ metadata_factored$latrine_trt<- as.factor(metadata_factored$latrine_trt)
 sampr<- sample_data(filt_rare_phy_16s) #pull out data from phyloseq
 
 #order metadata to match that from phyloseq
-metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$`#SampleID`, row.names(sampr))), ]
+metadata_factored_rep<-metadata_factored[ order(match(metadata_factored$`SampleID`, row.names(sampr))), ]
 
 set.seed(200)
 #run permanova
@@ -815,18 +815,15 @@ permanova_wet<- adonis2(distance(filt_rare_wet2, method='wunifrac')~treatment*so
 permanova_wet
 
 #pairwise permanova to see which groups are different from each other
-permanova_pairwise(distance(filt_rare_wet2, method='wunifrac'), grp=metadata_wet2$trt_soilAge)
+permanova_pairwise(distance(filt_rare_wet2, method='wunifrac'), grp=metadata_wet2$trt_soilAge, padj='holm')
 
 # see Plots_16S file for code to make plots
 
 #beta dispersion
 wet_betadis<-betadisper(distance(filt_rare_wet2, method='wunifrac'), group=metadata_wet2$trt_soilAge, type='median')
-adonis2(dist(wet_betadis$distances)~metadata_wet2$trt_soilAge)
 boxplot(wet_betadis)
 
 permutest(wet_betadis, permutations=999)
-
-permanova_pairwise(dist(wet_betadis$distances), grp=metadata_wet2$trt_soilAge)
 
 ## RGM Subset Permanova----
 # 5f. RGM Permanova
@@ -836,7 +833,7 @@ permanova_rgm<- adonis2(distance(filt_rare_RGM2, method='wunifrac')~treatment*`m
 permanova_rgm
 
 #pairwise permanova to see which groups are different
-permanova_pairwise(distance(filt_rare_RGM2, method='wunifrac'), grp=metadata_RGM2$trt_month)
+permanova_pairwise(distance(filt_rare_RGM2, method='wunifrac'), grp=metadata_RGM2$trt_month, padj='holm')
 
 
 ### see Plots_16S file for code on how to make the plots
@@ -849,7 +846,7 @@ metaDryRGM2<- metadata_RGM2 %>%
 #order samples
 sampRd<- sample_data(filt_dryRGM2) #pull out data from phyloseq
 
-metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$`#SampleID`, row.names(sampRd))), ]
+metaDryRGM2<-metaDryRGM2[order(match(metaDryRGM2$`SampleID`, row.names(sampRd))), ]
 
 set.seed(200)
 #permanova
@@ -858,7 +855,6 @@ permanova_rgmD
 
 #beta dispersion
 dryRGM_betadis<-betadisper(distance(filt_dryRGM2, method='wunifrac'), group=metaDryRGM2$treatment, type='median')
-adonis2(dist(dryRGM_betadis$distances)~metaDryRGM2$treatment)
 boxplot(dryRGM_betadis)
 permutest(dryRGM_betadis)
 
@@ -1205,196 +1201,12 @@ unique(ind_taxaC_Wrgm[!ind_taxaC_Wrgm$Family %in% ind_taxaC_dry$Family,5])
 
 
 # Differential Abundance----
-## RGM Latrine by season ----
-#above I had made a phyloseq where I renamed the ASVs into number so they made sense
-# but with this data it made more sense to use the original ASV name (I don't remember why but I know I had a reason)
+## Wet RGM Latrine vs Control DA----
 RGM2_phy_ASV<- filt_rare_rep2%>% 
   subset_samples(soilAge %in% ('rgm')) %>% 
   subset_samples(replicate %in% (2)) 
 
-
-#make season a factor
 rgm2_sampdata<- sample_data(RGM2_phy_ASV)
-rgm2_sampdata$month.collected<- as.factor(rgm2_sampdata$month.collected)
-RGM2_phy_ASV@sam_data<- rgm2_sampdata
-str(RGM2_phy_ASV@sam_data)
-
-#filter out just latrines for both replicates
-rgmL_rep2_phy<- subset_samples(RGM2_phy_ASV, treatment=='latrine')
-
-#find latrines that were only sampled in 1 season to filter them out
-samp2<-metadata_RGM2 %>% 
-  filter(treatment=='latrine') %>% 
-  group_by(latrine_trt) %>% 
-  dplyr::summarize(freq=n()) %>% 
-  filter(freq=='2') %>% 
-  dplyr::select(latrine_trt) %>% 
-  as.list() 
-
-#filter it to keep the latrines that were sampled in both seasons
-rgmL_rep2_phy<- subset_samples(rgmL_rep2_phy, latrine_trt %in% samp2$latrine_trt)
-
-#model with just rep 2, no RE
-rgmLSeason_noRE<-ancombc2(data = rgmL_rep2_phy, tax_level = "Genus",
-                         fix_formula = "month.collected", rand_formula =NULL,
-                         p_adj_method = "holm", pseudo_sens = TRUE,
-                         prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
-                         group = "month.collected", struc_zero = TRUE, neg_lb = TRUE,
-                         alpha = 0.05, n_cl = 2, verbose = TRUE,
-                         global = F, pairwise = F, dunnet = F, trend = F,
-                         iter_control = list(tol = 1e-2, max_iter = 20, 
-                                             verbose = TRUE),
-                         em_control = list(tol = 1e-5, max_iter = 100),
-                         lme_control = lme4::lmerControl(),
-                         mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
-
-#put primary results in data frame
-rgmLSeason_prim<-rgmLSeason_noRE$res
-
-#save it as an rds file
-saveRDS(rgmLSeason_prim, file='rgmLSeasonDA.rds')
-rgmLSeason_prim<- readRDS('rgmLSeasonDA.rds')
-
-#filter for what's significant
-rgmLSeasonSig<-rgmLSeason_prim %>% 
-  filter(q_month.collectedwet<.05 & passed_ss_month.collectedwet==T)
-
-#extract taxa from phyloseq
-rgmL_rep2_taxa<- data.frame(tax_table(rgmL_rep2_phy))
-
-#examine structural zeros
-rgmLSea_zero<- rgmLSeason_noRE$zero_ind
-
-rgmLSea_zeroWet<- rgmLSea_zero %>% 
-  filter(`structural_zero (month.collected = wet)`==T & `structural_zero (month.collected = dry)`==F)
-
-rgmLSea_zeroDry<- rgmLSea_zero %>% 
-  filter(`structural_zero (month.collected = wet)`==F & `structural_zero (month.collected = dry)`==T)
-
-
-#filter for the first genus that is significant to see how many ASVs there are
-rgmL_rep2_taxa %>% 
-  filter(Order=='0319-6G20' & Genus=='Incertae_Sedis') %>% 
-  count()
-
-both_names[4049:4062,]
-
-# Plot log fold change
-rgmLSeason_DAplot<- rgmLSeason_prim %>% 
-  filter(q_month.collectedwet<.05 & passed_ss_month.collectedwet==T) %>% 
-  dplyr::arrange(desc(lfc_month.collectedwet)) %>% 
-  dplyr::mutate(direct = ifelse(lfc_month.collectedwet> 0, "Positive LFC", "Negative LFC"))
-
-#make taxon and direction factors
-rgmLSeason_DAplot$taxon<- factor(rgmLSeason_DAplot$taxon, levels=rgmLSeason_DAplot$taxon)
-rgmLSeason_DAplot$direct<- factor(rgmLSeason_DAplot$direct, levels = c("Positive LFC", "Negative LFC"))
-
-
-fig_rgmLSeason = rgmLSeason_DAplot %>%
-  ggplot(aes(x = taxon, y = lfc_month.collectedwet, fill=direct)) + 
-  geom_bar(stat = "identity", width = 0.7, color = "black", 
-           position = position_dodge(width = 0.4)) +
-  geom_errorbar(aes(ymin = lfc_month.collectedwet - se_month.collectedwet, ymax = lfc_month.collectedwet + se_month.collectedwet), 
-                width = 0.2, position = position_dodge(0.05), color = "black") + 
-  labs(x = NULL, y = "Log fold change", 
-       title = "Log fold changes") + 
-  scale_fill_discrete(name = NULL) +
-  scale_color_discrete(name = NULL) +
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5),
-        panel.grid.minor.y = element_blank(),
-        axis.text.x= element_text(hjust=1, angle=45))
-fig_rgmLSeason
-
-
-## RGM Control by season----
-
-#factor season in metadata
-rgm2_sampdata<- sample_data(RGM2_phy_ASV)
-rgm2_sampdata$month.collected<- as.factor(rgm2_sampdata$month.collected)
-RGM2_phy_ASV@sam_data<- rgm2_sampdata
-
-#filter for controls
-rgmC_rep2_phy<- subset_samples(RGM2_phy_ASV, treatment=='control')
-
-#find latrines that were only sampled in 1 season to filter them out
-samp2<-metadata_RGM2 %>% 
-  filter(treatment=='control') %>% 
-  group_by(latrine_trt) %>% 
-  dplyr::summarize(freq=n()) %>% 
-  filter(freq=='2') %>% 
-  dplyr::select(latrine_trt) %>% 
-  as.list() 
-
-#filter it to keep the controls that were sampled in both seasons
-rgmC_rep2_phy<- subset_samples(rgmC_rep2_phy, latrine_trt %in% samp2$latrine_trt)
-
-#model with just rep 2, no RE
-rgmCSeason_noRE<-ancombc2(data = rgmC_rep2_phy, tax_level = "Genus",
-                         fix_formula = "month.collected", rand_formula =NULL,
-                         p_adj_method = "holm", pseudo_sens = TRUE,
-                         prv_cut = 0.10, lib_cut = 0, s0_perc = 0.05,
-                         group = "month.collected", struc_zero = TRUE, neg_lb = TRUE,
-                         alpha = 0.05, n_cl = 2, verbose = TRUE,
-                         global = F, pairwise = F, dunnet = F, trend = F,
-                         iter_control = list(tol = 1e-2, max_iter = 20, 
-                                             verbose = TRUE),
-                         em_control = list(tol = 1e-5, max_iter = 100),
-                         lme_control = lme4::lmerControl(),
-                         mdfdr_control = list(fwer_ctrl_method = "holm", B = 100))
-
-#put primary results in data frame
-rgmCSeason_prim<-rgmCSeason_noRE$res
-
-#save it as an rds file
-saveRDS(rgmCSeason_prim, file='rgmCSeasonDA.rds')
-rgmCSeason_prim<- readRDS('rgmCSeasonDA.rds')
-
-#filter for what's significant
-rgmCSeasonSig<-rgmCSeason_prim %>% 
-  filter(q_month.collectedwet<.05 & passed_ss_month.collectedwet==T)
-
-#extract taxa from phyloseq
-rgmC_rep2_taxa<- data.frame(tax_table(rgmC_rep2_phy))
-
-#examine structural zeros
-rgmCSea_zero<- rgmCSeason_noRE$zero_ind
-
-rgmCSea_zeroWet<- rgmCSea_zero %>% 
-  filter(`structural_zero (month.collected = dry)`==F & `structural_zero (month.collected = wet)`==T)
-
-rgmCSea_zeroDry<- rgmCSea_zero %>% 
-  filter(`structural_zero (month.collected = dry)`==T & `structural_zero (month.collected = wet)`==F)
-
-# Plot log fold change
-rgmCSeason_DAplot<- rgmCSeason_prim %>% 
-  filter(q_month.collectedwet<.05 & passed_ss_month.collectedwet==T) %>% 
-  dplyr::arrange(desc(lfc_month.collectedwet)) %>% 
-  dplyr::mutate(direct = ifelse(lfc_month.collectedwet> 0, "Positive LFC", "Negative LFC"))
-
-#make taxon and direction factors
-rgmCSeason_DAplot$taxon<- factor(rgmCSeason_DAplot$taxon, levels=rgmCSeason_DAplot$taxon)
-rgmCSeason_DAplot$direct<- factor(rgmCSeason_DAplot$direct, levels = c("Positive LFC", "Negative LFC"))
-
-
-fig_rgmCSeason = rgmCSeason_DAplot %>%
-  ggplot(aes(x = taxon, y = lfc_month.collectedwet, fill=direct)) + 
-  geom_bar(stat = "identity", width = 0.7, color = "black", 
-           position = position_dodge(width = 0.4)) +
-  geom_errorbar(aes(ymin = lfc_month.collectedwet - se_month.collectedwet, ymax = lfc_month.collectedwet + se_month.collectedwet), 
-                width = 0.2, position = position_dodge(0.05), color = "black") + 
-  labs(x = NULL, y = "Log fold change", 
-       title = "Log fold changes") + 
-  scale_fill_discrete(name = NULL) +
-  scale_color_discrete(name = NULL) +
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5),
-        panel.grid.minor.y = element_blank(),
-        axis.text.x= element_text(hjust=1, angle=45))
-fig_rgmCSeason
-
-## Wet RGM Latrine vs Control DA----
-
 #factor treatment
 rgm2_sampdata$treatment<- as.factor(rgm2_sampdata$treatment)
 RGM2_phy_ASV@sam_data<- rgm2_sampdata
@@ -1546,8 +1358,8 @@ rgmDryTreatmentDA<-ancombc2(data = rgmD_rep2_phy, tax_level = "Genus",
 rgmDryT_prim<-rgmDryTreatmentDA$res
 
 #save it as an rds file
-saveRDS(rgmDryT_prim, file='GenusrgmDryT_prim.rds')
-rgmDryT_prim<-readRDS('GenusrgmDryT_prim.rds')
+saveRDS(rgmDryT_prim, file='rgmDryT_prim.rds')
+rgmDryT_prim<-readRDS('rgmDryT_prim.rds')
 
 #filter for what's significant
 rgmDryTSig<-rgmDryT_prim %>% 
@@ -1585,7 +1397,7 @@ fig_rgmDryT = rgmDryT_DAplot %>%
   theme_bw() + 
   theme(plot.title = element_text(hjust = 0.5),
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_blank())
+        axis.text.x = element_text(angle=60))
 fig_rgmDryT
 
 #do the test at the phylum level
@@ -1610,9 +1422,8 @@ rgmDry_phylumSig<- rgmDry_phylum_prim %>%
 ## LIA vs RGM Control but using only 4 rgm locations that we chose based on location and availability----
 ##51,60,56,58
 #get the phyloseq with regular asv names
-wet2_phy_ASV<- filt_rare_phy_16s%>% 
-  subset_samples(month.collected %in% ('wet')) %>% 
-  subset_samples(replicate %in% (2)) 
+wet2_phy_ASV<- filt_rare_rep2%>% 
+  subset_samples(month.collected %in% ('wet')) 
 
 ## make our tesfilt_rare_phy_16s## make our test variables factors
 wet2_sampdata<- sample_data(wet2_phy_ASV)
@@ -1641,8 +1452,8 @@ soilAgeCDA<-ancombc2(data = soilAgeCDAphy, tax_level = "Genus",
 
 soilAgeC_prim<- soilAgeCDA$res
 
-saveRDS(soilAgeC_prim, file='F:\\Research\\16S_Soil\\RDS Files\\soilAgeC_prim.rds')
-soilAgeC_prim<-readRDS('F:\\Research\\16S_Soil\\RDS Files\\soilAgeC_prim.rds')
+saveRDS(soilAgeC_prim, file='soilAgeC_prim.rds')
+soilAgeC_prim<-readRDS('soilAgeC_prim.rds')
 
 soilAgeC_sig<- soilAgeC_prim %>% 
   filter(q_soilAgergm<.05 & passed_ss_soilAgergm==T)

@@ -361,6 +361,7 @@ wetbeta<-ggplot(metadata_wet2, aes(axis01, axis02)) +
   geom_point(size = 2, aes(colour = trt_soilAge)) +
   scale_color_manual(labels=c('LIA Control','RGM Control','LIA Latrine','RGM Latrine'),
                        values=c('cyan4', 'cyan2', 'purple4', 'purple1'))+
+  scale_fill_manual(values=c('cyan4', 'cyan2', 'purple4', 'purple1'))+
   xlab("PCoA 1") +
   ylab("PCoA 2") +
   labs(colour = "Treatment & Soil Age", title='by Soil Age') +
@@ -614,7 +615,7 @@ distlia<- distance(filt_lia2, method='wunifrac')
 # make a dendrogram using hclust on the distance
 dendLia<- as.dendrogram(hclust(distlia, method='ward.D2'))
 #color the branches so at the first split, one split is one color and the other split is the other
-dendLia<- color_branches(dendLia, k=3, col=c("cyan3",'cyan3',"purple3"))
+dendLia<- color_branches(dendLia, k=2, col=c("cyan3","purple3"))
 col_labels<- get_leaves_branches_col(dendLia)
 col_labels <- col_labels[order(order.dendrogram(dendLia))]
 dendLia <- set(dendLia, "labels_cex", 0.8)
@@ -622,9 +623,6 @@ dendLia<-place_labels(dendLia, as.character(metalia2$latrine_trt))
 #this sets the dimensions of the plotting plane so that the dendrogram fits in it
 par(mar = c(1,1,1,14))
 plot_horiz.dendrogram(dendLia, side=F)
-
-png("F:\\Research\\Plots\\dendlia.png", units='in', width=15, height=5, res=600)
-
 
 #get the lables in order for use in the heat map
 LIAlab<-labels(dendLia)
@@ -762,7 +760,7 @@ Phylum_abundanceL <- cast(Phylum_abundanceL, Sample ~ Phylum)
 row.names(Phylum_abundanceL)<- Phylum_abundanceL$Sample
 
 #de-select first column
-Phylum_abundanceL<- Phylum_abundanceL[,2:29]
+Phylum_abundanceL<- Phylum_abundanceL[,2:44]
 #make it a data frame bc right now it's a cast df bc we used the cast function
 Phylum_abundanceL<- as.data.frame(Phylum_abundanceL)
 
@@ -777,8 +775,6 @@ Phy_relabLt<- data.frame((t(Phy_relabL)), check.names=F)
 metalia2$latrine_trt<- factor(metalia2$latrine_trt, levels=LIAlab)
 
 #plot it
-#this is the code to save it as an image, run this line then the plot then dev.off()
-png("F:\\Research\\Plots\\liaheat2.pdf", units = "in", width = 10, height = 5, res = 600) 
 
 dev.off()
 heatlia<-plot_ts_heatmap(Phy_relabLt, metalia2, 0.01, "latrine_trt", colors=c('#fcfdbf','#b73779', '#403c3c')) +
@@ -815,7 +811,7 @@ Phylum_abundanceW <- aggregate(Abundance~Sample+Phylum, datW, FUN=sum)
 Phylum_abundanceW <- cast(Phylum_abundanceW, Sample ~ Phylum)
 
 row.names(Phylum_abundanceW)<- Phylum_abundanceW$Sample
-Phylum_abundanceW<- Phylum_abundanceW[,2:29]
+Phylum_abundanceW<- Phylum_abundanceW[,2:44]
 Phylum_abundanceW<- as.data.frame(Phylum_abundanceW)
 
 
@@ -834,7 +830,7 @@ metargmW2$latrine_trt<- factor(metargmW2$latrine_trt, levels=rgmWlab)
 
 #plot it
 heatrgmw<-plot_ts_heatmap(Phy_relabWt, metargmW2, 0.01, "latrine_trt", colors=c('#fcfdbf','#b73779', '#403c3c')) +
-  theme(axis.text.y = element_text(size = 12, hjust = 0,
+  theme(axis.text.y = element_text(size = 10, hjust = 0,
                                     margin = margin(c(0,-1,0,0))),
         axis.text.x = element_text(size = 10, angle = 30, hjust = 1, vjust = 1,
                                    margin = margin(c(-1.5,0,0,0))),
@@ -864,7 +860,7 @@ Phylum_abundanceR <- aggregate(Abundance~Sample+Phylum, datR, FUN=sum)
 Phylum_abundanceR <- cast(Phylum_abundanceR, Sample ~ Phylum)
 
 row.names(Phylum_abundanceR)<- Phylum_abundanceR$Sample
-Phylum_abundanceR<- Phylum_abundanceR[,2:29]
+Phylum_abundanceR<- Phylum_abundanceR[,2:44]
 Phylum_abundanceR<- as.data.frame(Phylum_abundanceR)
 
 
@@ -897,4 +893,32 @@ plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf
 
 
 
+
+
+
+### stacked bar plot----
+#RGM dry
+#calculate total relative abundance and filter out anything that was less than 1%
+relabRt<-data.frame(rowSums(Phy_relabRt))
+
+relabRt$taxa<- row.names(relabRt)
+passed_threshRt<-relabRt%>% 
+  filter(rowSums.Phy_relabRt.>.01) 
+
+Phy_relabRt$taxa<- row.names(Phy_relabRt)
+
+#filter out the ones less than 1% total rel abun
+plot_Rt<-Phy_relabRt %>% 
+  filter(taxa %in% passed_threshRt$taxa)
+
+
+#make long format
+Phy_relabRtlong<- pivot_longer(plot_Rt, names_to='sample', cols=1:24)
+
+
+
+#plot it
+ggplot(Phy_relabRtlong, aes(fill=taxa, y=value, x=sample)) + 
+  geom_bar(position="fill", stat="identity")+
+  scale_fill_manual(values=c('indianred', 'purple4','lightblue','lightgreen','brown4','gray','indianred', 'purple4','lightblue','lightgreen','brown4','gray' ,'indianred', 'purple4','lightblue','lightgreen','brown4','gray','indianred', 'purple4','lightblue','lightgreen','brown4','gray', 'indianred', 'purple4','lightblue','lightgreen','brown4','gray', 'indianred', 'purple4','lightblue'))
 
