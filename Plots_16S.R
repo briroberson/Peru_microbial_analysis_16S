@@ -901,32 +901,7 @@ plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf
 
 
 ### stacked bar plot----
-#RGM dry
-#calculate total relative abundance and filter out anything that was less than 1%
-relabRt<-data.frame(rowSums(Phy_relabRt))
-
-relabRt$taxa<- row.names(relabRt)
-passed_threshRt<-relabRt%>% 
-  filter(rowSums.Phy_relabRt.>.01) 
-
-Phy_relabRt$taxa<- row.names(Phy_relabRt)
-
-#filter out the ones less than 1% total rel abun
-plot_Rt<-Phy_relabRt %>% 
-  filter(taxa %in% passed_threshRt$taxa)
-
-
-#make long format
-Phy_relabRtlong<- pivot_longer(plot_Rt, names_to='sample', cols=1:24)
-
-
-
-#plot it
-ggplot(Phy_relabRtlong, aes(fill=taxa, y=value, x=sample)) + 
-  geom_bar(position="fill", stat="identity")+
-  scale_fill_manual(values=c('indianred', 'purple4','lightblue','lightgreen','brown4','gray','indianred', 'purple4','lightblue','lightgreen','brown4','gray' ,'indianred', 'purple4','lightblue','lightgreen','brown4','gray','indianred', 'purple4','lightblue','lightgreen','brown4','gray', 'indianred', 'purple4','lightblue','lightgreen','brown4','gray', 'indianred', 'purple4','lightblue'))
-
-#take 2
+###########RGM dry----
 #add control/latrine data to relative abundance matrix
 dry_trt<-metaDryRGM2$treatment
 Phy_relabR$treatment<- dry_trt
@@ -939,8 +914,104 @@ Phy_relabR<- Phy_relabR %>%
 #select just control sites and average the Phyla relative abundances
 dryC_avgab<-Phy_relabR %>% 
   filter(trt_num==0) %>% 
-  colMeans()
+  colMeans() 
 
-dryC_avgab<- data.frame(dryC_avgab) 
-#need to drop the last row that is trt_num and pick up with that and doing this for latrines
+dryC_avgab<- data.frame(dryC_avgab*100) #multiplying *100 gives percent
+dryC_avgab <- dryC_avgab[1:43,, drop=F]
+
+#select just control sites and average the Phyla relative abundances
+dryL_avgab<-Phy_relabR %>% 
+  filter(trt_num==1) %>% 
+  colMeans() 
+
+dryL_avgab<- data.frame(dryL_avgab*100) 
+dryL_avgab <- dryL_avgab[1:43,, drop=F]
+
+#join them together
+dry_avgab<- merge(dryC_avgab, dryL_avgab, by='row.names')
+dry_avgab<- dry_avgab %>% 
+  dplyr::rename(Phylum=Row.names, control_ab=dryC_avgab...100, latrine_ab=dryL_avgab...100)
+
+###group things <1% in both treatments
+low_dry_Phy<-dry_avgab %>% 
+  filter(latrine_ab<1 & control_ab<1) %>% 
+  select(Phylum)
+
+#make a variable so anything <1% is a 1 and all other phyla have a unique number
+dry_avgab$phy<- ifelse(dry_avgab$Phylum %in% low_dry_Phy$Phylum, 1, seq(2,345,1))
+
+#combine the others
+dry_final_ab<-dry_avgab %>% 
+  group_by(phy) %>% #group by unique phyla or other
+  mutate(control_ab_pro=sum(control_ab), latrine_ab_pro=sum(latrine_ab)) %>% #sum abundances for others
+  print(n=43) %>% #check it out
+  filter(phy>1 | Phylum=='Abditibacteriota') %>% #keep only the phyla >1% AND one other so it can be renamed
+  select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
+  pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
+dry_final_ab$Phylum[1:2]='Other' #rename the one we kept to Other (make sure you have the right column)
+
+ggplot(dry_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
+  geom_bar(position='fill', stat='identity')
+#looks great! now to do for the other data
+
+###########RGM wet----
+#add control/latrine data to relative abundance matrix
+wet_trt<-metargmW2$treatment #make sure samples are in the same order
+Phy_relabW$treatment<- wet_trt
+
+#recode treatment to be a number
+Phy_relabW$trt_numW<- ifelse(Phy_relabW$treatment=='latrine', 1, 0)
+Phy_relabW<- Phy_relabW %>% 
+  select(-treatment)
+
+#select just control sites and average the Phyla relative abundances
+wetC_avgab<-Phy_relabW %>% 
+  filter(trt_numW==0) %>% 
+  colMeans() 
+
+wetC_avgab<- data.frame(wetC_avgab*100) #multiplying *100 gives percent
+wetC_avgab <- wetC_avgab[1:43,, drop=F]
+
+#select just latrine sites and average the Phyla relative abundances
+wetL_avgab<-Phy_relabW %>% 
+  filter(trt_numW==1) %>% 
+  colMeans() 
+
+wetL_avgab<- data.frame(wetL_avgab*100) 
+wetL_avgab <- wetL_avgab[1:43,, drop=F]
+
+#join them together
+wet_avgab<- merge(wetC_avgab, wetL_avgab, by='row.names')
+wet_avgab<- wet_avgab %>% 
+  dplyr::rename(Phylum=Row.names, control_ab=wetC_avgab...100, latrine_ab=wetL_avgab...100)
+
+###group things <1% in both treatments
+low_wet_Phy<-wet_avgab %>% 
+  filter(latrine_ab<1 & control_ab<1) %>% 
+  select(Phylum)
+
+#make a variable so anything <1% is a 1 and all other phyla have a unique number
+wet_avgab$phy<- ifelse(wet_avgab$Phylum %in% low_wet_Phy$Phylum, 1, seq(2,345,1))
+
+#combine the others
+wet_final_ab<-wet_avgab %>% 
+  group_by(phy) %>% #group by unique phyla or other
+  mutate(control_ab_pro=sum(control_ab), latrine_ab_pro=sum(latrine_ab)) %>% #sum abundances for others
+  print(n=43) %>% #check it out
+  filter(phy>1 | Phylum=='Armatimonadota') %>% #keep only the phyla >1% AND one other so it can be renamed
+  select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
+  pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
+wet_final_ab$Phylum[7:8]='Other' #rename the one we kept to Other (make sure you have the right column)
+
+ggplot(wet_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
+  geom_bar(position='fill', stat='identity')
+#looks great! now to do for the other data
+
+
+
+
+
+
+
+
 
