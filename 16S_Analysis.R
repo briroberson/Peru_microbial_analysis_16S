@@ -335,10 +335,18 @@ metadata_filt<- metadata_filt %>%
 ## NECESSARY Calculate Diversity 
 ### 4a. Calculate diversity
 # 
+taxa_all<- data.frame(tax_table(filt_rare_phy_16s))
+taxa_all$Phylum[is.na(taxa_all$Phylum)] <- "Incertae_Sedis"
+taxa_all$Class[is.na(taxa_all$Class)] <- "Incertae_Sedis"
+taxa_all$Order[is.na(taxa_all$Order)] <- "Incertae_Sedis"
+taxa_all$Family[is.na(taxa_all$Family)] <- "Incertae_Sedis"
+taxa_all$Genus[is.na(taxa_all$Genus)] <- "Incertae_Sedis"
+
+filt_rare_phy_16s@tax_table<-tax_table(as.matrix(taxa_all))
 
 #fix metadata names 
 metadata <- metadata %>%
-  rename(SampleID = `#SampleID`)
+  dplyr::rename(SampleID = `#SampleID`)
 
 # ### All data shannon
 all_shan_div<-estimate_richness(filt_rare_phy_16s, measures='Shannon')
@@ -393,6 +401,11 @@ slope_aspect$latrine<- slope_aspect$Latrine
 metadata_filt<- metadata_filt %>% 
   left_join(slope_aspect, by='latrine')
 
+#add Vicuna RAI 
+vicugnaRAI<- dplyr::select(vicugnaRAI, latrine, RAI_IE_vicugna )
+
+metadata_filt<- metadata_filt %>% 
+  left_join(vicugnaRAI, by='latrine')
 
 ############ make the things going into the models factors
 ## Wet Subset Models ----
@@ -430,28 +443,32 @@ emmeans(m_wet_rich, pairwise~treatment*soilAge)
 # the latrine:elevation coefficient times the scale(elevation) value (ex -.34408*1.89 + .25140*1.89)
 
 #do LIA to see if treatment is significant
-wet_richLIA<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metalia2,family=poisson(link='log'))
+wet_richLIA<- lmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metalia2)
 summary(wet_richLIA)
 Anova(wet_richLIA)
 
 #do RGM wet to see if treatment is significant
-wet_richRGMw<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metargmW2,family=poisson(link='log'))
+wet_richRGMw<- lmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metargmW2)
 summary(wet_richRGMw)
 Anova(wet_richRGMw)
 
 #compare AIC to model without elevation
-m_wet_rich<-glmer(Observed~treatment*soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet,family=poisson(link='log'))
+m_wet_rich<-lmer(Observed~treatment*soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
 summary(m_wet_rich)
 Anova(m_wet_rich)
 
 #compare to soil Age null model. this tests if having soil age at all in the model makes it better
-m_wet_rich_nullS<- glmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metadata_wet,family=poisson(link='log'))
+m_wet_rich_nullS<- lmer(Observed~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
 lrtest(m_wet_richNB, m_wet_rich_nullS) #if p value is sig, then the regular model is better than the null model
 
 #compare to interaction null model. this tests if the soil age interaction is significant
-m_wet_rich_nullI<- glmer(Observed~treatment*elevation_ref+soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet,family=poisson(link='log'))
+m_wet_rich_nullI<- lmer(Observed~treatment*elevation_ref+soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
 lrtest(m_wet_richNB, m_wet_rich_nullI)
 
+#make vicuna rai model
+m_wet_rich_rai<- lmer(Observed~treatment*RAI_IE_vicugna+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
+Anova(m_wet_rich_rai)
+summary(m_wet_rich_rai)
 
 ### Shannon's Diversity ----
 #Wet season Shannon's diversity using reference elevation
@@ -475,6 +492,13 @@ lrtest(m_wet_shan_div, m_wet_shan_nullS)
 #compare to interaction null model
 m_wet_shan_nullI<- lmer(Shannon~treatment*elevation_sc+soilAge+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
 lrtest(m_wet_shan_div, m_wet_shan_nullI)
+
+#make vicuna rai model
+m_wet_shan_rai<- lmer(Shannon~treatment*RAI_IE_vicugna+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
+Anova(m_wet_shan_rai)
+summary(m_wet_shan_rai)
+
+
 
 ### Inv Simpson's Diversity ----
 #wet season Simpson with reference elevation

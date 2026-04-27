@@ -655,6 +655,7 @@ plot_horiz.dendrogram(dendrgmD, side=F)
 rgmDlab<-labels(dendrgmD)
 
 
+
 ### plot ts heatmap code----
 #I had to change the code because the mutate_() function doesn't work anymore and R will
 #no longer ignore it and then it wasn't working so I had to remove a ~ that they had inthe code
@@ -852,8 +853,9 @@ officer::read_pptx() %>%
 
 ### for dry rgm----
 #glomerate it 
-glomR <- tax_glom(filt_dryRGM2, taxrank = 'Phylum')
-datR <- psmelt(glomR)
+
+glomR <- tax_glom(filt_dryRGM2, taxrank = 'Phylum') 
+datR <- psmelt(glomR) 
 datR$Phylum <- as.character(datR$Phylum)
 
 Phylum_abundanceR <- aggregate(Abundance~Sample+Phylum, datR, FUN=sum)
@@ -865,7 +867,7 @@ Phylum_abundanceR<- as.data.frame(Phylum_abundanceR)
 
 
 #calculate relative abundance
-Phy_relabR<-make_relative(as.matrix(Phylum_abundanceR))
+Phy_relabR<-make_relative(as.matrix(Phylum_abundanceR)) #this is relative abundace out of all ASVs in that sample (3705)
 Phy_relabR<-data.frame(Phy_relabR, check.names=F)
 #transpose it
 Phy_relabRt<- data.frame((t(Phy_relabR)), check.names=F)
@@ -886,6 +888,8 @@ plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf
                                    margin = margin(c(-1.5,0,0,0))),
         plot.margin = unit(c(0.1,0.1,0.1,1), "cm")) +
   labs(title='RGM Dry')
+
+
 
 
 
@@ -921,4 +925,22 @@ Phy_relabRtlong<- pivot_longer(plot_Rt, names_to='sample', cols=1:24)
 ggplot(Phy_relabRtlong, aes(fill=taxa, y=value, x=sample)) + 
   geom_bar(position="fill", stat="identity")+
   scale_fill_manual(values=c('indianred', 'purple4','lightblue','lightgreen','brown4','gray','indianred', 'purple4','lightblue','lightgreen','brown4','gray' ,'indianred', 'purple4','lightblue','lightgreen','brown4','gray','indianred', 'purple4','lightblue','lightgreen','brown4','gray', 'indianred', 'purple4','lightblue','lightgreen','brown4','gray', 'indianred', 'purple4','lightblue'))
+
+#take 2
+#add control/latrine data to relative abundance matrix
+dry_trt<-metaDryRGM2$treatment
+Phy_relabR$treatment<- dry_trt
+
+#recode treatment to be a number
+Phy_relabR$trt_num<- ifelse(Phy_relabR$treatment=='latrine', 1, 0)
+Phy_relabR<- Phy_relabR %>% 
+  select(-treatment)
+
+#select just control sites and average the Phyla relative abundances
+dryC_avgab<-Phy_relabR %>% 
+  filter(trt_num==0) %>% 
+  colMeans()
+
+dryC_avgab<- data.frame(dryC_avgab) 
+#need to drop the last row that is trt_num and pick up with that and doing this for latrines
 
