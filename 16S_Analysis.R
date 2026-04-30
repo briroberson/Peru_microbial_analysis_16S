@@ -368,7 +368,7 @@ if(taxa_are_rows(filt_rare_phy_16s)) {otu_mat <- t(otu_mat)} #transpose
 richness <- specnumber(otu_mat) #calculate richness
 sample_ids <- sample_names(filt_rare_phy_16s) #grab samp IDs
 all_richness <- data.frame(`SampleID` = sample_ids, Observed = richness)
-all_richness <- all_richness %>% dplyr::rename(`SampleID`= X.SampleID)
+
 # #merge with metadata
 metadata_filt<- metadata_filt %>% 
   left_join(all_richness, by='SampleID') %>% 
@@ -483,15 +483,15 @@ Anova(m_wet_rich_chrono, type='III')
 emmeans(m_wet_rich_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_wet_rich_chrono))
 
-ggplot(metadata_wet, aes(class, Observed)) +
+ggplot(metadata_wet, aes(treatment, Observed)) +
   geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
-  geom_point(size = 3, aes(color=elevation.y), alpha = .7) + #adds the individual points
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
   labs(x = NULL, y = "ASV Richness", title = "a) 16S Alpha Diversity") +
   scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
   scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
   theme_bw() +
   theme+
-  facet_wrap(~treatment)
+  facet_wrap(~class, nrow=1)
 
 
 ### Shannon's Diversity ----
@@ -528,6 +528,18 @@ summary(m_wet_shan_chrono)
 Anova(m_wet_shan_chrono, type='III')
 emmeans(m_wet_shan_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_wet_shan_chrono))
+
+ggplot(metadata_wet, aes(class, Shannon)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = "Shannon Diversity", title = "a) 16S Alpha Diversity") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  theme_bw() +
+  theme+
+  facet_wrap(~treatment, nrow=1)
+
+
 
 ### Inv Simpson's Diversity ----
 #wet season Simpson with reference elevation
@@ -747,15 +759,15 @@ Anova(m_dry_rich_chrono, type='III')
 emmeans(m_dry_rich_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_dry_rich_chrono))
 
-ggplot(metaDryRGM_both, aes(class, Observed)) +
+ggplot(metaDryRGM_both, aes(treatment, Observed)) +
   geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
-  geom_point(size = 3, aes(color=elevation.y), alpha = .7) + #adds the individual points
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
   labs(x = NULL, y = "ASV Richness", title = "a) 16S Alpha Diversity") +
   scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
   scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
   theme_bw() +
   theme+
-  facet_wrap(~treatment)
+  facet_wrap(~class)
 
 
 ####Shannon
@@ -775,6 +787,19 @@ summary(m_dry_shan_chrono)
 Anova(m_dry_shan_chrono, type='III')
 emmeans(m_dry_shan_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_dry_shan_chrono))
+
+
+ggplot(metaDryRGM_both, aes(class, Shannon)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = "Shannon Diversity", title = "a) 16S Alpha Diversity") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  theme_bw() +
+  theme+
+  facet_wrap(~treatment)
+
+
 
 ####Inv Simpson
 m_dry_simp<- lmer(InvSimpson~treatment*elevation_sc+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
