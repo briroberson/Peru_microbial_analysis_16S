@@ -58,7 +58,7 @@ waypoints<- read.csv("waypoints.csv")
 #slope and aspect file
 slope_aspect<- read.csv("latrine_geog_info.csv")
 #vicugna RAI
-vicugnaRAI<- read.csv("vicugnaRAI_20260304.csv") #using data downloaded Mar 4 2026. 30 min IE used
+critter<- read.csv("critter_diversity_richness_043026.csv")
 #chronosequences
 chrono<- read.csv('soil_chronosequence_points.csv') #using the dual Tang and Seimon method decided April 28 2026
 
@@ -403,15 +403,19 @@ slope_aspect$latrine<- slope_aspect$Latrine
 metadata_filt<- metadata_filt %>% 
   left_join(slope_aspect, by='latrine')
 
-#add Vicuna RAI 
-vicugnaRAI<- dplyr::select(vicugnaRAI, latrine, RAI_vicugna )
+#add critter stuff
+critter$latrine<- critter$X
 
-metadata_filt<- metadata_filt %>% 
-  left_join(vicugnaRAI, by='latrine')
+metadata_crit<- metadata_filt %>% 
+  filter(treatment=='latrine') %>% 
+  dplyr::select(c('latrine','Observed','Shannon','elevation','InvSimpson','Pielou','replicate','latrine_trt_month','month-collected'))
+
+critter_filt<-critter %>% 
+  left_join(metadata_crit, by='latrine')
 
 #add chronosequences
 metadata_filt<- metadata_filt %>% 
-  left_join(chrono, by='latrine')
+  full_join(chrono, by='latrine')
 
 ############ make the things going into the models factors
 ## Wet Subset Models ----
@@ -480,18 +484,10 @@ summary(m_wet_rich_rai)
 m_wet_rich_chrono<- lmer(Observed~treatment*class+(1|latrine_trt_month)+(1|latrine), data=metadata_wet)
 summary(m_wet_rich_chrono)
 Anova(m_wet_rich_chrono, type='III')
-emmeans(m_wet_rich_chrono, pairwise~treatment*class)
-qqnorm(residuals(m_wet_rich_chrono))
+export<-emmeans(m_wet_rich_chrono, pairwise~treatment*class)
+write.csv(export$contrasts, "wetChronoRichnessPairwise.csv", row.names = FALSE)
 
-ggplot(metadata_wet, aes(treatment, Observed)) +
-  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
-  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
-  labs(x = NULL, y = "ASV Richness", title = "a) 16S Alpha Diversity") +
-  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
-  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
-  theme_bw() +
-  theme+
-  facet_wrap(~class, nrow=1)
+qqnorm(residuals(m_wet_rich_chrono))
 
 
 ### Shannon's Diversity ----
@@ -528,17 +524,6 @@ summary(m_wet_shan_chrono)
 Anova(m_wet_shan_chrono, type='III')
 emmeans(m_wet_shan_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_wet_shan_chrono))
-
-ggplot(metadata_wet, aes(class, Shannon)) +
-  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
-  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
-  labs(x = NULL, y = "Shannon Diversity", title = "a) 16S Alpha Diversity") +
-  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
-  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
-  theme_bw() +
-  theme+
-  facet_wrap(~treatment, nrow=1)
-
 
 
 ### Inv Simpson's Diversity ----
@@ -735,7 +720,7 @@ metaDryRGM_both<- metadata_filt %>%
   filter(soilAge=='rgm' & `month-collected`=='dry')
 
 metaDryRGM_both<-metaDryRGM_both %>% 
-  mutate(treatment=as.factor(treatment), `month-collected`=as.factor(`month-collected`), class=as.factor(class)) %>% 
+  mutate(treatment=as.factor(treatment), `month-collected`=as.factor(`month-collected`), class=factor(class, levels=c('LIA', 'LIA-1931','1931-1962','1984-2024'))) %>% 
   mutate(elevation_sc=scale(elevation))
 
 #richness
@@ -756,18 +741,10 @@ ggplot(metaDryRGM_both, aes(x=RAI_vicugna, y=Observed))+
 m_dry_rich_chrono<- lmer(Observed~treatment*class+(1|latrine_trt_month)+(1|latrine), data=metaDryRGM_both)
 summary(m_dry_rich_chrono)
 Anova(m_dry_rich_chrono, type='III')
-emmeans(m_dry_rich_chrono, pairwise~treatment*class)
+export<-emmeans(m_dry_rich_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_dry_rich_chrono))
 
-ggplot(metaDryRGM_both, aes(treatment, Observed)) +
-  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
-  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
-  labs(x = NULL, y = "ASV Richness", title = "a) 16S Alpha Diversity") +
-  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
-  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
-  theme_bw() +
-  theme+
-  facet_wrap(~class)
+write.csv(export$contrasts, "dryChronoRichnessPairwise.csv", row.names = FALSE)
 
 
 ####Shannon
@@ -787,17 +764,6 @@ summary(m_dry_shan_chrono)
 Anova(m_dry_shan_chrono, type='III')
 emmeans(m_dry_shan_chrono, pairwise~treatment*class)
 qqnorm(residuals(m_dry_shan_chrono))
-
-
-ggplot(metaDryRGM_both, aes(class, Shannon)) +
-  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
-  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
-  labs(x = NULL, y = "Shannon Diversity", title = "a) 16S Alpha Diversity") +
-  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
-  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
-  theme_bw() +
-  theme+
-  facet_wrap(~treatment)
 
 
 
@@ -887,6 +853,10 @@ metadata_factored$soilAge<- as.factor(metadata_factored$soilAge)
 metadata_factored$`month-collected`<- as.factor(metadata_factored$`month-collected`)
 metadata_factored$trt_month<- as.factor(metadata_factored$trt_month)
 metadata_factored$trt_soilAge<- as.factor(metadata_factored$trt_soilAge)
+metadata_factored$class<- factor(metadata_factored$class, levels=c('LIA','LIA-1931','1931-1962','1984-2024'))
+metadata_factored$trt_class<- factor(paste(metadata_factored$treatment, metadata_factored$class, sep='_'), 
+                                     levels=c('control_LIA','latrine_LIA','control_LIA-1931','latrine_LIA-1931','control_1931-1962','latrine_1931-1962','control_1984-2024','latrine_1984-2024'))
+
 
 ## they weren't different so we are going to choose just replicate 2 from the data
 ##because having 2 is pseudoreplication
@@ -982,6 +952,13 @@ boxplot(wet_betadis)
 
 permutest(wet_betadis, permutations=999)
 
+##chronosequence
+set.seed(200)
+adonis2(distance(filt_rare_wet2, method='wunifrac')~treatment*class, data=metadata_wet2, by='terms')
+exports<-permanova_pairwise(distance(filt_rare_wet2, method='wunifrac'), grp=metadata_wet2$trt_class, padj='holm')
+write.csv(exports, "wetChronoPairwisePermanova.csv", row.names = FALSE)
+
+
 ## RGM Subset Permanova----
 # 5f. RGM Permanova
 set.seed(200)
@@ -1014,6 +991,12 @@ permanova_rgmD
 dryRGM_betadis<-betadisper(distance(filt_dryRGM2, method='wunifrac'), group=metaDryRGM2$treatment, type='median')
 boxplot(dryRGM_betadis)
 permutest(dryRGM_betadis)
+
+##chronosequence
+adonis2(distance(filt_dryRGM2, method='wunifrac')~treatment*class, data=metaDryRGM2, by='terms')
+exports<-permanova_pairwise(distance(filt_dryRGM2, method='wunifrac'), grp=metaDryRGM2$trt_class, padj='holm')
+write.csv(exports, "dryChronoPairwisePermanova.csv", row.names = FALSE)
+
 
 # Simper ----
 ##### 7. Try Simper for testing community difference

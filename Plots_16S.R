@@ -3,9 +3,9 @@
 theme<-theme(
       plot.title = element_text(size = 16, hjust = 0.5),
       axis.title.y = element_text(face="bold", size = 18), 
-      axis.text.y = element_text(size = 16),
+      axis.text.y = element_text(size = 10),
       axis.title.x = element_text(size = 18, face = "bold",color = "black"),
-      axis.text.x=element_text(size=16),
+      axis.text.x=element_text(size=10),
       plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
 
 library(plyr)
@@ -174,6 +174,8 @@ ggplot(metaDryRGM_both, aes(x=elevation, y=Pielou, color=treatment))+
 
 
 
+
+
 ## Alpha diversity plot----
 ## Richness ----
 wetrich<-ggplot(metadata_wet, aes(treatment, Observed)) +
@@ -326,6 +328,60 @@ ggplot(metaDryRGM_both, aes(treatment, Observed)) +
   scale_color_gradient(low='lightgray', high='black')+
   theme_bw() +
   theme
+
+
+
+
+### Chronosequence plots----
+## Wet subset Richness----
+ggplot(metadata_wet, aes(class, Observed)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = "ASV Richness", title = "a) 16S Alpha Diversity") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  theme_bw() +
+  theme+
+  theme(axis.text.x=element_text(angle=60, vjust=.5))+
+  facet_wrap(~treatment, nrow=1)
+
+
+
+## Wet subset Shannon----
+ggplot(metadata_wet, aes(treatment, Shannon)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = "Shannon Diversity", title = "a) 16S Alpha Diversity") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  theme_bw() +
+  theme+
+  theme(axis.text.x=element_text(angle=60, vjust=.5))+
+  facet_wrap(~class, nrow=1)
+
+## Dry Richness----
+ggplot(metaDryRGM_both, aes(class, Observed)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = "ASV Richness", title = "a) 16S Alpha Diversity") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  theme_bw() +
+  theme+
+  theme(axis.text.x=element_text(angle=60, vjust=.5))+
+  facet_wrap(~treatment)
+
+##Dry Subset Shannon----
+ggplot(metaDryRGM_both, aes(treatment, Shannon)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = "Shannon Diversity", title = "a) 16S Alpha Diversity") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  theme_bw() +
+  theme+
+  theme(axis.text.x=element_text(angle=60, vjust=.5))+
+  facet_wrap(~class)
 
 
 
