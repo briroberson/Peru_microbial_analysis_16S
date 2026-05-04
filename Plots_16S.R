@@ -1005,6 +1005,7 @@ dry_final_ab<-dry_avgab %>%
   select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
   pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
 dry_final_ab$Phylum[1:2]='Other' #rename the one we kept to Other (make sure you have the right column)
+dry_final_ab$soil<-'dryRGM'
 
 ggplot(dry_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
   geom_bar(position='fill', stat='identity')
@@ -1058,16 +1059,74 @@ wet_final_ab<-wet_avgab %>%
   select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
   pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
 wet_final_ab$Phylum[7:8]='Other' #rename the one we kept to Other (make sure you have the right column)
+wet_final_ab$soil<- 'wetRGM'
 
 ggplot(wet_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
   geom_bar(position='fill', stat='identity')
 #looks great! now to do for the other data
 
+### LIA
+#add control/latrine data to relative abundance matrix
+lia_trt<-metalia2$treatment #make sure samples are in the same order
+Phy_relabL$treatment<- lia_trt
+
+#recode treatment to be a number
+Phy_relabL$trt_numL<- ifelse(Phy_relabL$treatment=='latrine', 1, 0)
+Phy_relabL<- Phy_relabL %>% 
+  select(-treatment)
+
+#select just control sites and average the Phyla relative abundances
+liaC_avgab<-Phy_relabL %>% 
+  filter(trt_numL==0) %>% 
+  colMeans() 
+
+liaC_avgab<- data.frame(liaC_avgab*100) #multiplying *100 gives percent
+liaC_avgab <- liaC_avgab[1:43,, drop=F]
+
+#select just latrine sites and average the Phyla relative abundances
+liaL_avgab<-Phy_relabL %>% 
+  filter(trt_numL==1) %>% 
+  colMeans() 
+
+liaL_avgab<- data.frame(liaL_avgab*100) 
+liaL_avgab <- liaL_avgab[1:43,, drop=F]
+
+#join them together
+lia_avgab<- merge(liaC_avgab, liaL_avgab, by='row.names')
+lia_avgab<- lia_avgab %>% 
+  dplyr::rename(Phylum=Row.names, control_ab=liaC_avgab...100, latrine_ab=liaL_avgab...100)
+
+###group things <1% in both treatments
+low_lia_Phy<-lia_avgab %>% 
+  filter(latrine_ab<1 & control_ab<1) %>% 
+  select(Phylum)
+
+#make a variable so anything <1% is a 1 and all other phyla have a unique number
+lia_avgab$phy<- ifelse(lia_avgab$Phylum %in% low_lia_Phy$Phylum, 1, seq(2,345,1))
+
+#combine the others
+lia_final_ab<-lia_avgab %>% 
+  group_by(phy) %>% #group by unique phyla or other
+  mutate(control_ab_pro=sum(control_ab), latrine_ab_pro=sum(latrine_ab)) %>% #sum abundances for others
+  print(n=43) %>% #check it out
+  filter(phy>1 | Phylum=='Armatimonadota') %>% #keep only the phyla >1% AND one other so it can be renamed
+  select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
+  pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
+lia_final_ab$Phylum[5:6]='Other' #rename the one we kept to Other (make sure you have the right rows)
+lia_final_ab$soil<- 'lia'
+
+ggplot(lia_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
+  geom_bar(position='fill', stat='identity')
+#looks great! now to do for the other data
 
 
+###combine all data
+allrgm<- full_join(wet_final_ab, dry_final_ab, by='soil')
+allrgm<- dry_final_ab
+allrgm[27:58,]<- wet_final_ab
+allsoil<-allrgm
+allsoil[59:86,]<- lia_final_ab
+allsoil$trt_soil<- paste(allsoil$treatment, allsoil$soil, sep='_')
 
-
-
-
-
-
+ggplot(allsoil, aes(x=trt_soil, y=avg_rel_ab, fill=Phylum ))+
+  geom_bar(stat='identity')
