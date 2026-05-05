@@ -975,7 +975,7 @@ dryC_avgab<-Phy_relabR %>%
 dryC_avgab<- data.frame(dryC_avgab*100) #multiplying *100 gives percent
 dryC_avgab <- dryC_avgab[1:43,, drop=F]
 
-#select just control sites and average the Phyla relative abundances
+#select just latrine sites and average the Phyla relative abundances
 dryL_avgab<-Phy_relabR %>% 
   filter(trt_num==1) %>% 
   colMeans() 
@@ -988,28 +988,47 @@ dry_avgab<- merge(dryC_avgab, dryL_avgab, by='row.names')
 dry_avgab<- dry_avgab %>% 
   dplyr::rename(Phylum=Row.names, control_ab=dryC_avgab...100, latrine_ab=dryL_avgab...100)
 
-###group things <1% in both treatments
-low_dry_Phy<-dry_avgab %>% 
-  filter(latrine_ab<1 & control_ab<1) %>% 
+###group things <1% separately for latrines and controls
+low_dryC_Phy<-dry_avgab %>% 
+  filter(control_ab<1) %>% 
+  select(Phylum)
+
+low_dryL_Phy<-dry_avgab %>% 
+  filter(latrine_ab<1) %>% 
   select(Phylum)
 
 #make a variable so anything <1% is a 1 and all other phyla have a unique number
-dry_avgab$phy<- ifelse(dry_avgab$Phylum %in% low_dry_Phy$Phylum, 1, seq(2,345,1))
+#but do it separately for latrines and controls. so the Other category is anything not identified
+# and anything <1% in that specific treatment
+dry_avgab$phyC<- ifelse(dry_avgab$Phylum %in% low_dryC_Phy$Phylum, 1, ifelse(dry_avgab$Phylum=='Incertae_Sedis', 1,seq(2,345,1)))
+dry_avgab$phyL<- ifelse(dry_avgab$Phylum %in% low_dryL_Phy$Phylum, 1, ifelse(dry_avgab$Phylum=='Incertae_Sedis', 1,seq(2,345,1)))
 
-#combine the others
+#combine the other data and filter out the things
 dry_final_ab<-dry_avgab %>% 
-  group_by(phy) %>% #group by unique phyla or other
-  mutate(control_ab_pro=sum(control_ab), latrine_ab_pro=sum(latrine_ab)) %>% #sum abundances for others
-  print(n=43) %>% #check it out
-  filter(phy>1 | Phylum=='Abditibacteriota') %>% #keep only the phyla >1% AND one other so it can be renamed
+  group_by(phyC) %>% #group by unique phyla or other for controls
+  mutate(control_ab_pro=sum(control_ab)) %>% #sum abundances for others and incertae sedis
+  print(n=43) %>% 
+  ungroup() %>% 
+  group_by(phyL) %>% #group by unique phyla for latrines
+  mutate(latrine_ab_pro=sum(latrine_ab)) %>%  #sum abundances for others and incertae sedis
+  ungroup() %>% 
+  filter((phyC>1 | phyL>1) | Phylum=='Abditibacteriota') %>% #filter out all the things that were grouped except for 1
   select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
-  pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
-dry_final_ab$Phylum[1:2]='Other' #rename the one we kept to Other (make sure you have the right column)
+  pivot_longer(cols=1:2, names_to='treatment', values_to='avg_rel_ab') #make long format
+
+#rename the one we kept to Other (make sure you have the right column)
+dry_final_ab$Phylum[1:2]='Other'
+
+#well it kept control and latrine for each one (for example Cyanobacteria is >1% for controls but 'other' for latrines)
+#so we need to remove those remaining that are <1% for just one group
+dry_final_ab<-subset(dry_final_ab,! (avg_rel_ab==avg_rel_ab[2] & Phylum != 'Other') )
+dry_final_ab<-subset(dry_final_ab,! (avg_rel_ab==avg_rel_ab[1] & Phylum != 'Other') )
+#make a soil type column
 dry_final_ab$soil<-'dryRGM'
 
 ggplot(dry_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
   geom_bar(position='fill', stat='identity')
-#looks great! now to do for the other data
+
 
 ###########RGM wet----
 #add control/latrine data to relative abundance matrix
@@ -1042,23 +1061,43 @@ wet_avgab<- merge(wetC_avgab, wetL_avgab, by='row.names')
 wet_avgab<- wet_avgab %>% 
   dplyr::rename(Phylum=Row.names, control_ab=wetC_avgab...100, latrine_ab=wetL_avgab...100)
 
-###group things <1% in both treatments
-low_wet_Phy<-wet_avgab %>% 
-  filter(latrine_ab<1 & control_ab<1) %>% 
+###group things <1% separately for latrines and controls
+low_wetC_Phy<-wet_avgab %>% 
+  filter(control_ab<1) %>% 
+  select(Phylum)
+
+low_wetL_Phy<-wet_avgab %>% 
+  filter(latrine_ab<1) %>% 
   select(Phylum)
 
 #make a variable so anything <1% is a 1 and all other phyla have a unique number
-wet_avgab$phy<- ifelse(wet_avgab$Phylum %in% low_wet_Phy$Phylum, 1, seq(2,345,1))
+#but do it separately for latrines and controls. so the Other category is anything not identified
+# and anything <1% in that specific treatment
+wet_avgab$phyC<- ifelse(wet_avgab$Phylum %in% low_wetC_Phy$Phylum, 1, ifelse(wet_avgab$Phylum=='Incertae_Sedis', 1,seq(2,345,1)))
+wet_avgab$phyL<- ifelse(wet_avgab$Phylum %in% low_wetL_Phy$Phylum, 1, ifelse(wet_avgab$Phylum=='Incertae_Sedis', 1,seq(2,345,1)))
 
-#combine the others
+#combine the other data and filter out the things
 wet_final_ab<-wet_avgab %>% 
-  group_by(phy) %>% #group by unique phyla or other
-  mutate(control_ab_pro=sum(control_ab), latrine_ab_pro=sum(latrine_ab)) %>% #sum abundances for others
-  print(n=43) %>% #check it out
-  filter(phy>1 | Phylum=='Armatimonadota') %>% #keep only the phyla >1% AND one other so it can be renamed
+  group_by(phyC) %>% #group by unique phyla or other for controls
+  mutate(control_ab_pro=sum(control_ab)) %>% #sum abundances for others and incertae sedis
+  print(n=43) %>% 
+  ungroup() %>% 
+  group_by(phyL) %>% #group by unique phyla for latrines
+  mutate(latrine_ab_pro=sum(latrine_ab)) %>%  #sum abundances for others and incertae sedis
+  ungroup() %>% 
+  filter((phyC>1 | phyL>1) | Phylum=='Armatimonadota') %>% #filter out all the things that were grouped except for 1
   select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
-  pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
-wet_final_ab$Phylum[7:8]='Other' #rename the one we kept to Other (make sure you have the right column)
+  pivot_longer(cols=1:2, names_to='treatment', values_to='avg_rel_ab') #make long format
+
+#rename the one we kept to Other (make sure you have the right column)
+wet_final_ab$Phylum[7:8]='Other'
+
+#well it kept control and latrine for each one 
+#so we need to remove those remaining that are <1% for just one group
+wet_final_ab<-subset(wet_final_ab,! (avg_rel_ab==avg_rel_ab[8] & Phylum != 'Other') )
+wet_final_ab<-subset(wet_final_ab,! (avg_rel_ab==avg_rel_ab[6] & Phylum != 'Other') )
+
+#make soil type column
 wet_final_ab$soil<- 'wetRGM'
 
 ggplot(wet_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
@@ -1096,23 +1135,42 @@ lia_avgab<- merge(liaC_avgab, liaL_avgab, by='row.names')
 lia_avgab<- lia_avgab %>% 
   dplyr::rename(Phylum=Row.names, control_ab=liaC_avgab...100, latrine_ab=liaL_avgab...100)
 
-###group things <1% in both treatments
-low_lia_Phy<-lia_avgab %>% 
-  filter(latrine_ab<1 & control_ab<1) %>% 
+###group things <1% separately for latrines and controls
+low_liaC_Phy<-lia_avgab %>% 
+  filter(control_ab<1) %>% 
+  select(Phylum)
+
+low_liaL_Phy<-lia_avgab %>% 
+  filter(latrine_ab<1) %>% 
   select(Phylum)
 
 #make a variable so anything <1% is a 1 and all other phyla have a unique number
-lia_avgab$phy<- ifelse(lia_avgab$Phylum %in% low_lia_Phy$Phylum, 1, seq(2,345,1))
+#but do it separately for latrines and controls. so the Other category is anything not identified
+# and anything <1% in that specific treatment
+lia_avgab$phyC<- ifelse(lia_avgab$Phylum %in% low_liaC_Phy$Phylum, 1, ifelse(lia_avgab$Phylum=='Incertae_Sedis', 1,seq(2,345,1)))
+lia_avgab$phyL<- ifelse(lia_avgab$Phylum %in% low_liaL_Phy$Phylum, 1, ifelse(lia_avgab$Phylum=='Incertae_Sedis', 1,seq(2,345,1)))
 
-#combine the others
+#combine the other data and filter out the things
 lia_final_ab<-lia_avgab %>% 
-  group_by(phy) %>% #group by unique phyla or other
-  mutate(control_ab_pro=sum(control_ab), latrine_ab_pro=sum(latrine_ab)) %>% #sum abundances for others
-  print(n=43) %>% #check it out
-  filter(phy>1 | Phylum=='Armatimonadota') %>% #keep only the phyla >1% AND one other so it can be renamed
+  group_by(phyC) %>% #group by unique phyla or other for controls
+  mutate(control_ab_pro=sum(control_ab)) %>% #sum abundances for others and incertae sedis
+  print(n=43) %>% 
+  ungroup() %>% 
+  group_by(phyL) %>% #group by unique phyla for latrines
+  mutate(latrine_ab_pro=sum(latrine_ab)) %>%  #sum abundances for others and incertae sedis
+  ungroup() %>% 
+  filter((phyC>1 | phyL>1) | Phylum=='Armatimonadota') %>% #filter out all the things that were grouped except for 1
   select(c('control_ab_pro','latrine_ab_pro','Phylum')) %>%  #select the relevant columns
-  pivot_longer(cols=2:3, names_to='treatment', values_to='avg_rel_ab') #pivot so long format
-lia_final_ab$Phylum[5:6]='Other' #rename the one we kept to Other (make sure you have the right rows)
+  pivot_longer(cols=1:2, names_to='treatment', values_to='avg_rel_ab') #make long format
+
+#rename the one we kept to Other (make sure you have the right column)
+lia_final_ab$Phylum[5:6]='Other'
+
+#well it kept control and latrine for each one 
+#so we need to remove those remaining that are <1% for just one group
+lia_final_ab<-subset(lia_final_ab,! (avg_rel_ab==avg_rel_ab[6] & Phylum != 'Other') )
+lia_final_ab<-subset(lia_final_ab,! (avg_rel_ab==avg_rel_ab[5] & Phylum != 'Other') )
+
 lia_final_ab$soil<- 'lia'
 
 ggplot(lia_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
@@ -1121,12 +1179,19 @@ ggplot(lia_final_ab, aes(fill=Phylum, x=treatment, y=avg_rel_ab))+
 
 
 ###combine all data
-allrgm<- full_join(wet_final_ab, dry_final_ab, by='soil')
 allrgm<- dry_final_ab
-allrgm[27:58,]<- wet_final_ab
+allrgm[22:47,]<- wet_final_ab
 allsoil<-allrgm
-allsoil[59:86,]<- lia_final_ab
+allsoil[48:70,]<- lia_final_ab
 allsoil$trt_soil<- paste(allsoil$treatment, allsoil$soil, sep='_')
+allsoil$trt_soil<- factor(allsoil$trt_soil, levels=c('control_ab_pro_lia','latrine_ab_pro_lia','control_ab_pro_wetRGM','latrine_ab_pro_wetRGM','control_ab_pro_dryRGM','latrine_ab_pro_dryRGM'))
+write.csv(allsoil, 'allsoil_taxabar.csv')
 
 ggplot(allsoil, aes(x=trt_soil, y=avg_rel_ab, fill=Phylum ))+
-  geom_bar(stat='identity')
+  geom_bar(stat='identity') +
+  scale_fill_manual(values=c('#bd6553','#cca86a','#bab47b','#beadc7','#a68698',
+                             '#c3d9c3','#97b8bf','#7a523b','#b07f15','#1d8c27',
+                             '#735a94','#965148','#4b7396','#4d4846','#869187',
+                             '#781038'))+
+  scale_x_discrete(labels=c('Control LIA','Latrine LIA','Control Wet RGM','Latrine Wet RGM','Control Dry RGM','Latrine Dry RGM'))+
+  theme(axis.text.x=element_text(angle=60, hjust=1))
