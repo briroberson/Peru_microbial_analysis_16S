@@ -2412,3 +2412,72 @@ on controls')) +
   theme(axis.text.x=element_text(),
         legend.title=element_blank())
 fig_phyl
+
+
+######extract Bacteroidetes with abundance
+#filter for bacteroidota
+rgm_bacter<-subset_taxa(filt_rare_RGM2, Phylum=='Bacteroidota')
+#extract taxa
+rgm_bacter_tax<-data.frame(rgm_bacter@tax_table)
+
+# sum ASVs for latrines and controls 
+rgmL_bacter<- subset_samples(rgm_bacter, treatment=='latrine')
+rgmL_bacter_asv<- rowSums(data.frame(rgmL_bacter@otu_table))
+rgmC_bacter<- subset_samples(rgm_bacter, treatment=='control')
+rgmC_bacter_asv<- rowSums(data.frame(rgmC_bacter@otu_table))
+
+#add abundance to taxa data 
+rgm_bacter_tax$latrineAbun<- rgmL_bacter_asv
+rgm_bacter_tax$controlAbun<- rgmC_bacter_asv
+
+#get overall abundance for each family
+rgm_bacter_tax<- rgm_bacter_tax %>% 
+  group_by(Family) %>% 
+  mutate(sumL=sum(latrineAbun), sumC=sum(controlAbun)) %>% 
+  ungroup() %>% 
+  dplyr::select(-c('latrineAbun', 'controlAbun','Genus'))
+rgm_bacter_fam<-distinct(rgm_bacter_tax)
+
+#get overall abundance for each genus
+#rerun the rgm_bacter_tax lines first
+rgm_bacter_tax<- rgm_bacter_tax %>% 
+  group_by(Genus) %>% 
+  mutate(sumL=sum(latrineAbun), sumC=sum(controlAbun)) %>% 
+  ungroup() %>% 
+  dplyr::select(-c('latrineAbun', 'controlAbun'))
+rgm_bacter_gen<-distinct(rgm_bacter_tax)
+
+
+lia_bacter<- subset_taxa(filt_lia2, Phylum=='Bacteroidota')
+lia_bacter_tax<- data.frame(lia_bacter@tax_table)
+
+liaL_bacter<- subset_samples(lia_bacter, treatment=='latrine')
+liaL_bacter_asv<- rowSums(data.frame(liaL_bacter@otu_table))
+liaC_bacter<- subset_samples(lia_bacter, treatment=='control')
+liaC_bacter_asv<- rowSums(data.frame(liaC_bacter@otu_table))
+
+lia_bacter_tax$latrineAbun<- liaL_bacter_asv
+lia_bacter_tax$controlAbun<- liaC_bacter_asv
+
+#get overall abundance for each family
+lia_bacter_tax<- lia_bacter_tax %>% 
+  group_by(Family) %>% 
+  mutate(sumL=sum(latrineAbun), sumC=sum(controlAbun)) %>% 
+  ungroup() %>% 
+  dplyr::select(-c('latrineAbun', 'controlAbun','Genus'))
+lia_bacter_fam<-distinct(lia_bacter_tax)
+
+#get overall abundance for each genus
+#rerun the lia_bacter_tax lines first
+lia_bacter_tax<- lia_bacter_tax %>% 
+  group_by(Genus) %>% 
+  mutate(sumL=sum(latrineAbun), sumC=sum(controlAbun)) %>% 
+  ungroup() %>% 
+  dplyr::select(-c('latrineAbun', 'controlAbun'))
+lia_bacter_gen<-distinct(lia_bacter_tax)
+
+#save as csv
+write.csv(lia_bacter_gen, file='LIA_BacteroidotaGenus.csv')
+write.csv(lia_bacter_fam, file='LIA_BacteroidotaFamily.csv')
+write.csv(rgm_bacter_gen, file='RGM_BacteroidotaGenus.csv')
+write.csv(rgm_bacter_fam, file='RGM_BacteroidotaFamily.csv')
