@@ -19,6 +19,9 @@ library(funrar)
 library(mctoolsr)
 library(rvg)
 library(officer)
+library(RColorBrewer)
+library(patchwork)
+library(cowplot)
 
 
 ## Elevation plots----
@@ -963,6 +966,14 @@ plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf
 
 ##By sample 
 
+#set global color scheme with unique, consistent colors for taxa 
+all_taxa <- sort(unique(c(
+  Phy_relabLt$taxa,  
+  Phy_relabWt$taxa, 
+  Phy_relabRt$taxa)))
+cols <- setNames(colorRampPalette(brewer.pal(12, "Set3"))(length(all_taxa)), all_taxa)
+
+
 #LIA using phylum
 
 #make taxa a row
@@ -981,9 +992,7 @@ sample_order <- Phy_relabLtlong %>%
 Phy_relabLtlong$sample <- factor(
   Phy_relabLtlong$sample,
   levels = sample_order)
-#set color scheme by number of taxa 
-n_taxa <- length(unique(Phy_relabLtlong$taxa))
-cols <- colorRampPalette(brewer.pal(12, "Set3"))(n_taxa)
+
 #format sample names 
 sample_labels <- Phy_relabLtlong %>%
   distinct(sample, latrine) %>%
@@ -1029,9 +1038,7 @@ sample_order <- Phy_relabWtlong %>%
 Phy_relabWtlong$sample <- factor(
   Phy_relabWtlong$sample,
   levels = sample_order)
-#set color scheme by number of taxa 
-n_taxa <- length(unique(Phy_relabWtlong$taxa))
-cols <- colorRampPalette(brewer.pal(12, "Set3"))(n_taxa)
+
 #format sample names 
 sample_labels <- Phy_relabWtlong %>%
   distinct(sample, latrine) %>%
@@ -1072,9 +1079,7 @@ sample_order <- Phy_relabRtlong %>%
 Phy_relabRtlong$sample <- factor(
   Phy_relabRtlong$sample,
   levels = sample_order)
-#set color scheme by number of taxa 
-n_taxa <- length(unique(Phy_relabRtlong$taxa))
-cols <- colorRampPalette(brewer.pal(12, "Set3"))(n_taxa)
+
 #format sample names 
 sample_labels <- Phy_relabRtlong %>%
   distinct(sample, latrine) %>%
@@ -1101,7 +1106,7 @@ ggplot(Phy_relabRtlong,
 
 
 
-
+#By treatment/season
 
 
 
@@ -1343,3 +1348,64 @@ ggplot(allsoil, aes(x=trt_soil, y=avg_rel_ab, fill=Phylum ))+
                              '#781038'))+
   scale_x_discrete(labels=c('Control LIA','Latrine LIA','Control Wet RGM','Latrine Wet RGM','Control Dry RGM','Latrine Dry RGM'))+
   theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+##combined wet and dry season figure 
+
+#assign 'Other' its own color 
+cols["Other"] <- "grey70"
+
+# subset combined data
+wet_sub_da <- allsoil %>%
+  filter(grepl("wetRGM|lia", trt_soil))
+dry_sub_da <- allsoil %>%
+  filter(grepl("dryRGM", trt_soil))
+
+#format labels 
+wet_sub_da$Treatment <- ifelse(
+  grepl("control", wet_sub_da$trt_soil), "Reference","Latrine")
+dry_sub_da$Treatment <- ifelse(
+  grepl("control", dry_sub_da$trt_soil),"Reference", "Latrine")
+
+#groups for faceting
+wet_sub_da$Soil <- case_when(
+  grepl("lia", wet_sub_da$trt_soil) ~ "LIA",
+  grepl("wetRGM", wet_sub_da$trt_soil) ~ "RGM")
+
+#character phylum for color matching 
+wet_sub_da$Phylum <- as.character(wet_sub_da$Phylum)
+dry_sub_da$Phylum <- as.character(dry_sub_da$Phylum)
+
+
+# PLOT 1 — wet season LIA & RGM
+p1 <- ggplot(wet_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Soil) +
+  scale_fill_manual(values = cols) +
+  labs(
+    title = "Wet Season",
+    x = "",
+    y = "Relative Abundance" ) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+# PLOT 2 — dry season
+p2 <- ggplot(dry_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = cols) +
+  labs(
+    title = "Dry Season (RGM)",
+    x = "",
+    y = "Relative Abundance") +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+#combine into a single legend for plotting 
+legend <- get_legend(p1)
+
+#plot combined figure 
+final_plot <- plot_grid(
+  p1 + theme(legend.position = "none"),
+  p2 + theme(legend.position = "none"),
+  ncol = 2)
+plot_grid(final_plot, legend, rel_widths = c(4, 1))
