@@ -2481,3 +2481,46 @@ write.csv(lia_bacter_gen, file='LIA_BacteroidotaGenus.csv')
 write.csv(lia_bacter_fam, file='LIA_BacteroidotaFamily.csv')
 write.csv(rgm_bacter_gen, file='RGM_BacteroidotaGenus.csv')
 write.csv(rgm_bacter_fam, file='RGM_BacteroidotaFamily.csv')
+
+#second round for just flagged taxa 
+target_fams <- c("Sphingobacteriaceae", "Blattabacteriaceae", "Paludibacteraceae", "Lentimicrobiaceae")
+
+rgm_target_fams <- subset_taxa(
+  filt_rare_RGM2,
+  Family %in% target_fams)
+
+rgm_target_fams_df <- psmelt(rgm_target_fams)
+#for those not identified at genus call it OTU
+rgm_target_fams_df$lowest_tax <- ifelse(
+  is.na(rgm_target_fams_df$Genus) | rgm_target_fams_df$Genus == "",
+  rgm_target_fams_df$OTU,
+  rgm_target_fams_df$Genus)
+
+rgm_target_fams_summary <- rgm_target_fams_df %>%
+  group_by(Family, lowest_tax, treatment) %>%
+  summarise(total_abun = sum(Abundance), .groups = "drop")
+
+rgm_target_fams_summary_wide <- rgm_target_fams_summary %>%
+  tidyr::pivot_wider(
+    names_from = treatment,
+    values_from = total_abun,
+    values_fill = 0)
+
+#write to CSV
+write.csv(rgm_target_fams_summary_wide, "RGM_target_families_abundance.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
