@@ -957,6 +957,154 @@ plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf
 
 
 ### stacked bar plot----
+
+
+
+
+##By sample 
+
+#LIA using phylum
+
+#make taxa a row
+Phy_relabLt$taxa<- row.names(Phy_relabLt)
+#make long format & join metadata 
+Phy_relabLtlong<- pivot_longer(Phy_relabLt, names_to='sample', cols=1:8)
+Phy_relabLtlong <- Phy_relabLtlong %>%
+  left_join(metalia2 %>% select(SampleID, treatment, latrine),
+            by = c("sample" = "SampleID"))
+Phy_relabLtlong$latrine <- gsub("^L", "", Phy_relabLtlong$latrine) #remove L for labelling
+# order samples for plotting 
+sample_order <- Phy_relabLtlong %>%
+  arrange(treatment, sample) %>%
+  pull(sample) %>%
+  unique()
+Phy_relabLtlong$sample <- factor(
+  Phy_relabLtlong$sample,
+  levels = sample_order)
+#set color scheme by number of taxa 
+n_taxa <- length(unique(Phy_relabLtlong$taxa))
+cols <- colorRampPalette(brewer.pal(12, "Set3"))(n_taxa)
+#format sample names 
+sample_labels <- Phy_relabLtlong %>%
+  distinct(sample, latrine) %>%
+  arrange(sample)
+
+label_vec <- setNames(
+  sample_labels$latrine,
+  sample_labels$sample)
+
+#plot
+ggplot(Phy_relabLtlong,
+       aes(x = sample, y = value, fill = taxa)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_grid(~treatment,
+             scales = "free_x",
+             space = "free_x", 
+             labeller = labeller(
+               treatment = c(
+                 control = "Reference",
+                 latrine = "Latrine" ))) +
+  scale_x_discrete(labels = label_vec) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum" ) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+
+#RGM Wet
+
+#make taxa a row 
+Phy_relabWt$taxa<- row.names(Phy_relabWt)
+#make long format & join metadata 
+Phy_relabWtlong<- pivot_longer(Phy_relabWt, names_to='sample', cols=1:38)
+Phy_relabWtlong <- Phy_relabWtlong %>%
+  left_join(metargmW2 %>% select(SampleID, treatment, latrine),
+            by = c("sample" = "SampleID"))
+Phy_relabWtlong$latrine <- gsub("^L", "", Phy_relabWtlong$latrine) #remove L for labelling
+# order samples for plotting 
+sample_order <- Phy_relabWtlong %>%
+  arrange(treatment, sample) %>%
+  pull(sample) %>%
+  unique()
+Phy_relabWtlong$sample <- factor(
+  Phy_relabWtlong$sample,
+  levels = sample_order)
+#set color scheme by number of taxa 
+n_taxa <- length(unique(Phy_relabWtlong$taxa))
+cols <- colorRampPalette(brewer.pal(12, "Set3"))(n_taxa)
+#format sample names 
+sample_labels <- Phy_relabWtlong %>%
+  distinct(sample, latrine) %>%
+  arrange(sample)
+label_vec <- setNames(
+  sample_labels$latrine,
+  sample_labels$sample)
+#plot
+ggplot(Phy_relabWtlong, 
+       aes(x = sample, y = value, fill = taxa)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_grid(~treatment,
+             scales = "free_x",
+             space = "free_x", 
+             labeller = labeller(
+               treatment = c(
+                 control = "Reference",
+                 latrine = "Latrine" ))) +
+  scale_x_discrete(labels = label_vec) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum" ) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+#RGM dry
+Phy_relabRt$taxa<- row.names(Phy_relabRt)
+#make long format & join metadata 
+Phy_relabRtlong<- pivot_longer(Phy_relabRt, names_to='sample', cols=1:24)
+Phy_relabRtlong <- Phy_relabRtlong %>%
+  left_join(metaDryRGM2 %>% select(SampleID, treatment, latrine),
+            by = c("sample" = "SampleID"))
+Phy_relabRtlong$latrine <- gsub("^L", "", Phy_relabRtlong$latrine) #remove L for labelling
+# order samples for plotting 
+sample_order <- Phy_relabRtlong %>%
+  arrange(treatment, sample) %>%
+  pull(sample) %>%
+  unique()
+Phy_relabRtlong$sample <- factor(
+  Phy_relabRtlong$sample,
+  levels = sample_order)
+#set color scheme by number of taxa 
+n_taxa <- length(unique(Phy_relabRtlong$taxa))
+cols <- colorRampPalette(brewer.pal(12, "Set3"))(n_taxa)
+#format sample names 
+sample_labels <- Phy_relabRtlong %>%
+  distinct(sample, latrine) %>%
+  arrange(sample)
+label_vec <- setNames(
+  sample_labels$latrine,
+  sample_labels$sample)
+#plot
+ggplot(Phy_relabRtlong, 
+       aes(x = sample, y = value, fill = taxa)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_grid(~treatment,
+             scales = "free_x",
+             space = "free_x", 
+             labeller = labeller(
+               treatment = c(
+                 control = "Reference",
+                 latrine = "Latrine" ))) +
+  scale_x_discrete(labels = label_vec) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum" ) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+
+
+
+
+
+
 ###########RGM dry----
 #add control/latrine data to relative abundance matrix
 dry_trt<-metaDryRGM2$treatment
