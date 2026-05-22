@@ -1134,7 +1134,27 @@ permutest(dryRGM_betadis_chrono)
 boxplot(dryRGM_betadis_chrono)
 
 
+###separate for wet LIA and RGM: 
 
+
+##LIA 
+metadata_wet2_LIA <- metadata_wet2 %>%
+  filter(soilAge == 'lia')
+filt_rare_wet2_LIA <- subset_samples(filt_rare_wet2, soilAge == "lia")
+
+wetLIA_betadis<-betadisper(distance(filt_rare_wet2_LIA, method='wunifrac'), group=metadata_wet2_LIA$treatment, type='median')
+boxplot(wetLIA_betadis)
+permutest(wetLIA_betadis)
+
+
+##RGM 
+metadata_wet2_RGM <- metadata_wet2 %>%
+  filter(soilAge == 'rgm')
+filt_rare_wet2_RGM <- subset_samples(filt_rare_wet2, soilAge == "rgm")
+
+wetRGM_betadis<-betadisper(distance(filt_rare_wet2_RGM, method='wunifrac'), group=metadata_wet2_RGM$treatment, type='median')
+boxplot(wetRGM_betadis)
+permutest(wetRGM_betadis)
 
 # Simper ----
 ##### 7. Try Simper for testing community difference
