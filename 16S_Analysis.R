@@ -1117,6 +1117,25 @@ exports<-permanova_pairwise(distance(filt_dryRGM2, method='wunifrac'), grp=metaD
 write.csv(exports, "dryChronoPairwisePermanova.csv", row.names = FALSE)
 
 
+
+# Homogeneity of dispersions----
+
+
+###wet chronosequence: 
+wet_betadis_chrono <- betadisper(distance(filt_rare_wet2, method = 'wunifrac'), group = metadata_wet2$trt_class, type = 'median') #create betadisper object with dispersion distances  
+wet_permutest_chrono <- permutest(wet_betadis_chrono, permutations = 999) #test for differences in dispersions 
+wet_permutest_chrono
+boxplot(wet_betadis_chrono)
+
+
+###rgm dry chronosequence: 
+dryRGM_betadis_chrono<-betadisper(distance(filt_dryRGM2, method='wunifrac'), group=metaDryRGM2$trt_class, type='median')
+permutest(dryRGM_betadis_chrono)
+boxplot(dryRGM_betadis_chrono)
+
+
+
+
 # Simper ----
 ##### 7. Try Simper for testing community difference
 
