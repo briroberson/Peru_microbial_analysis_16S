@@ -443,6 +443,100 @@ print(pres, target = "F:\\Research\\github\\Peru_microbial_analysis_16s\\16s_ASV
 # by making a list of the ASVs that you want (from multipatt, simper, distance, etc.)
 # and then do spscorW[names of ASVs you want,]
 
+
+####### wet chronosequence----
+#get asv table and transpose
+asvW<- as.data.frame(otu_table(filt_rare_wet2))
+tasvW <- data.frame(t(asvW), check.names = F)
+
+#calculate the pcoa
+pcoaW<-cmdscale(d=distance(filt_rare_wet2, method='wunifrac'), eig=T)
+
+#retrieve species scores for it
+spscorW<-as.data.frame(wascores(x = pcoaW$points, w = tasvW))
+
+#add the scores to the metadata
+metadata_wet2$axis01<- vegan::scores(pcoaW)[,1]
+metadata_wet2$axis02<- vegan::scores(pcoaW)[,2]
+
+#use this function to calculate the hulls
+find_hull <- function(df) df[chull(df$axis01, df$axis02),]
+micro.hullsW <- ddply(metadata_wet2, "trt_class", find_hull)
+
+#plot it
+library(rcartocolor)
+
+# get 8 colors from Earth palate
+earth_cols <- carto_pal(8, "Earth")
+
+# assign first half (browns) to control, second half (blues) to latrine
+pcoa_cols <- c(
+  "control_LIA"        = earth_cols[1],
+  "control_LIA-1931"   = earth_cols[2],
+  "control_1931-1962"  = earth_cols[3],
+  "control_1984-2024"  = earth_cols[4],
+  
+  "latrine_LIA"        = earth_cols[5],
+  "latrine_LIA-1931"   = earth_cols[6],
+  "latrine_1931-1962"  = earth_cols[7],
+  "latrine_1984-2024"  = earth_cols[8]
+)
+
+temps_cols <- carto_pal(9, "Temps")
+
+pcoa_cols2 <- c(
+  "control_LIA"        = temps_cols[1],
+  "control_LIA-1931"   = temps_cols[2],
+  "control_1931-1962"  = temps_cols[3],
+  "control_1984-2024"  = temps_cols[4],
+  
+  "latrine_LIA"        = temps_cols[6],
+  "latrine_LIA-1931"   = temps_cols[7],
+  "latrine_1931-1962"  = temps_cols[8],
+  "latrine_1984-2024"  = temps_cols[9]
+)
+
+wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
+  geom_polygon(data = micro.hullsW, 
+               aes(colour = trt_class, fill = trt_class), alpha = 0.1, show.legend = F) +
+  # geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW, arrow=arrow())+
+  geom_point(size = 2, aes(colour = trt_class, shape = class))+ 
+  scale_colour_manual(
+    values = pcoa_cols2,
+    breaks = c(
+      "control_LIA",
+      "control_LIA-1931",
+      "control_1931-1962",
+      "control_1984-2024",
+      "latrine_LIA",
+      "latrine_LIA-1931",
+      "latrine_1931-1962",
+      "latrine_1984-2024"
+    )
+  ) +
+  scale_fill_manual(
+    values = pcoa_cols2,
+    breaks = c(
+      "control_LIA",
+      "control_LIA-1931",
+      "control_1931-1962",
+      "control_1984-2024",
+      "latrine_LIA",
+      "latrine_LIA-1931",
+      "latrine_1931-1962",
+      "latrine_1984-2024"
+    )
+  ) + 
+  xlab("PCoA 1") +
+  ylab("PCoA 2") +
+  labs(colour = "Treatment & Chronosequence Class", title='by Class') +
+  theme_bw() 
+wetbeta_chrono
+
+
+
+
+
 ##### just LIA----
 #get just lia phyloseq and metadata
 filt_lia2<- subset_samples(filt_rare_wet2, soilAge %in% ('lia'))
