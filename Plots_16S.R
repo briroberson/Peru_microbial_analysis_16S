@@ -534,7 +534,20 @@ wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
 wetbeta_chrono
 
 
+control_cols <- colorRampPalette(c("#b3de69", "cyan"))(4)
+latrine_cols <- colorRampPalette(c("#fb8072", "purple1"))(4)
 
+pcoa_cols2 <- c(
+  "control_LIA"       = control_cols[1],
+  "control_LIA-1931"  = control_cols[2],
+  "control_1931-1962" = control_cols[3],
+  "control_1984-2024" = control_cols[4],
+  
+  "latrine_LIA"       = latrine_cols[1],
+  "latrine_LIA-1931"  = latrine_cols[2],
+  "latrine_1931-1962" = latrine_cols[3],
+  "latrine_1984-2024" = latrine_cols[4]
+)
 
 
 ##### just LIA----
