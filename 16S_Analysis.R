@@ -1859,12 +1859,12 @@ fig_phyl = phyl_fig %>%
   geom_tile(color = "black") +
   scale_fill_gradient2(low = "cyan3", high = "purple3", mid = "white", 
                        na.value = "white", midpoint = 0, limit = c(lo, up),
-                       breaks=c(4,-2), labels=c('more abundant \
-on latrines','more abundant \
-on controls')) +
+                       breaks=c(4,-2), labels=c('More abundant \
+on latrines','More abundant \
+on referencess')) +
   geom_text(aes(group, taxon, label = value), size = 4) +
   scale_color_identity(guide = "none") +
-  labs(x = NULL, y = NULL, title = 'Phylum LFC Latrine-Control') +
+  labs(x = NULL, y = NULL, title = NULL) +
   theme_classic() +
   theme(axis.text.x=element_text(),
         legend.title=element_blank())

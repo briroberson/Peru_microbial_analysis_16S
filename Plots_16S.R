@@ -348,7 +348,19 @@ ggplot(metadata_wet, aes(class, Observed)) +
   theme(axis.text.x=element_text(angle=60, vjust=.5))+
   facet_wrap(~treatment, nrow=1)
 
-
+#or grouped by class 
+wetrich_chrono_plot <- ggplot(metadata_wet, aes(treatment, Observed)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = NULL, title = "a)") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  scale_x_discrete(labels = c(
+    control = "Reference",
+    latrine = "Latrine")) +
+  theme_bw() +
+  theme+
+  facet_wrap(~class, nrow = 1)
 
 ## Wet subset Shannon----
 ggplot(metadata_wet, aes(treatment, Shannon)) +
@@ -374,6 +386,20 @@ ggplot(metaDryRGM_both, aes(class, Observed)) +
   theme(axis.text.x=element_text(angle=60, vjust=.5))+
   facet_wrap(~treatment)
 
+#or by class 
+dryrich_chrono_plot <- ggplot(metaDryRGM_both, aes(treatment, Observed)) +
+  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = NULL, title = "b)") +
+  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  scale_x_discrete(labels = c(
+    control = "Reference",
+    latrine = "Latrine")) +
+  theme_bw() +
+  theme+
+  facet_wrap(~class, nrow = 1)
+
 ##Dry Subset Shannon----
 ggplot(metaDryRGM_both, aes(treatment, Shannon)) +
   geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
@@ -386,7 +412,8 @@ ggplot(metaDryRGM_both, aes(treatment, Shannon)) +
   theme(axis.text.x=element_text(angle=60, vjust=.5))+
   facet_wrap(~class)
 
-
+#plot both richness together 
+wetrich_chrono_plot + dryrich_chrono_plot
 
 
 ## PCoA plot----
