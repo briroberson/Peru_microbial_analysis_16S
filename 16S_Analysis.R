@@ -1313,11 +1313,160 @@ simper.results %>%
 
 ### See Plots_16S file for code that plots these ASVs as arrows
 
+###Simper across chronosequence classes 
+ 
+##wet season
+asvs_wet <- as.data.frame(otu_table(filt_rare_wet2)) #ASVs
+tASV_wet <- data.frame(t(asvs_wet), check.names = F)
+
+simper_chrono_wet<- simper(tASV_wet, metadata_wet2$trt_class)
+names(simper_chrono_wet)
+
+#see only significant species
+comparisons <- c(
+  "control_1931-1962_latrine_1931-1962",
+  "control_1931-1962_control_LIA-1931",
+  "control_1931-1962_latrine_LIA-1931",
+  "control_1931-1962_control_1984-2024",
+  "control_1931-1962_latrine_1984-2024",
+  "control_1931-1962_control_LIA",
+  "control_1931-1962_latrine_LIA",
+  "latrine_1931-1962_control_LIA-1931",
+  "latrine_1931-1962_latrine_LIA-1931",
+  "latrine_1931-1962_control_1984-2024",
+  "latrine_1931-1962_latrine_1984-2024",
+  "latrine_1931-1962_control_LIA",
+  "latrine_1931-1962_latrine_LIA",
+  "control_LIA-1931_latrine_LIA-1931",
+  "control_LIA-1931_control_1984-2024",
+  "control_LIA-1931_latrine_1984-2024",
+  "control_LIA-1931_control_LIA",
+  "control_LIA-1931_latrine_LIA",
+  "latrine_LIA-1931_control_1984-2024",
+  "latrine_LIA-1931_latrine_1984-2024",
+  "latrine_LIA-1931_control_LIA",
+  "latrine_LIA-1931_latrine_LIA",
+  "control_1984-2024_latrine_1984-2024",
+  "control_1984-2024_control_LIA",
+  "control_1984-2024_latrine_LIA",
+  "latrine_1984-2024_control_LIA",
+  "latrine_1984-2024_latrine_LIA",
+  "control_LIA_latrine_LIA")
+
+simper.results <- c()
+
+for(i in 1:length(comparisons)) {
+  require(tidyverse)
+  temp <- summary(simper_chrono_wet)[as.character(comparisons[i])] %>%
+    as.data.frame()
+  colnames(temp) <- gsub(
+    paste(comparisons[i],".", sep = ""), "", colnames(temp))
+  temp <- temp %>%
+    mutate(Comparison = comparisons[i],
+           Position = row_number()) %>%
+    rownames_to_column(var = "Species")
+  simper.results <- rbind(simper.results, temp)
+}
+
+#if that doesnt work try this 
+simper.results <- purrr::map_dfr(comparisons, function(comp) {
+  
+  as.data.frame(s[[comp]]) %>%
+    tibble::rownames_to_column("Species") %>%
+    mutate(
+      Comparison = comp,
+      Position = row_number()
+    )
+})
+
+#filter for significant 
+simper.results %>%
+  filter(p <= 0.05) %>%
+  dplyr::select(Species, average, Comparison, Position)
+
+#create a df of significant ASVs with taxonomy 
+taxachronoW <- as.data.frame(tax_table(filt_rare_wet2)) %>%
+  tibble::rownames_to_column("ASV")
+simper_taxa_chronoWsig <- simper.results %>%
+  left_join(taxachronoW, by = c("Species" = "ASV"))
+#grab top 10 only 
+simper_chronoW_top10 <- simper_taxa_chronoWsig %>%
+  group_by(Comparison) %>%
+  arrange(desc(average)) %>%
+  slice_head(n = 10) %>%
+  ungroup()
+write.csv(simper_chronoW_top10, "simper_chronoW_top10.csv", row.names = FALSE)
 
 
+##dry season (RGM)
+asvDrgm<- as.data.frame(otu_table(filt_dryRGM2)) #ASVs
+tasvDrgm <- data.frame(t(asvDrgm), check.names = F)
 
+# run simper
+simper_chrono_dry<- simper(tasvDrgm, metaDryRGM2$trt_class)
+names(simper_chrono_dry)
 
+#see only significant species
+comparisons <- c(
+  "control_LIA-1931_latrine_LIA-1931",
+  "control_LIA-1931_control_1984-2024",
+  "control_LIA-1931_latrine_1984-2024",
+  "control_LIA-1931_control_1931-1962",
+  "control_LIA-1931_latrine_1931-1962",
+  "latrine_LIA-1931_control_1984-2024",
+  "latrine_LIA-1931_latrine_1984-2024",
+  "latrine_LIA-1931_control_1931-1962",
+  "latrine_LIA-1931_latrine_1931-1962",
+  "control_1984-2024_latrine_1984-2024",
+  "control_1984-2024_control_1931-1962",
+  "control_1984-2024_latrine_1931-1962",
+  "latrine_1984-2024_control_1931-1962",
+  "latrine_1984-2024_latrine_1931-1962",
+  "control_1931-1962_latrine_1931-1962")
 
+simper.results <- c()
+
+for(i in 1:length(comparisons)) {
+  require(tidyverse)
+  temp <- summary(simper_chrono_wet)[as.character(comparisons[i])] %>%
+    as.data.frame()
+  colnames(temp) <- gsub(
+    paste(comparisons[i],".", sep = ""), "", colnames(temp))
+  temp <- temp %>%
+    mutate(Comparison = comparisons[i],
+           Position = row_number()) %>%
+    rownames_to_column(var = "Species")
+  simper.results <- rbind(simper.results, temp)
+}
+
+#if that doesnt work try this 
+simper.results <- purrr::map_dfr(comparisons, function(comp) {
+  
+  as.data.frame(s[[comp]]) %>%
+    tibble::rownames_to_column("Species") %>%
+    mutate(
+      Comparison = comp,
+      Position = row_number()
+    )
+})
+
+#filter for significant 
+simper.results %>%
+  filter(p <= 0.05) %>%
+  dplyr::select(Species, average, Comparison, Position)
+
+#create a df of significant ASVs with taxonomy 
+taxachronoDRGM <- as.data.frame(tax_table(filt_dryRGM2)) %>%
+  tibble::rownames_to_column("ASV")
+simper_taxa_chronoDRGMsig <- simper.results %>%
+  left_join(taxachronoDRGM, by = c("Species" = "ASV"))
+#grab top 10 only 
+simper_chronoDRGM_top10 <- simper_taxa_chronoDRGMsig %>%
+  group_by(Comparison) %>%
+  arrange(desc(average)) %>%
+  slice_head(n = 10) %>%
+  ungroup()
+write.csv(simper_chronoDRGM_top10, "simper_chronDRGM_top10.csv", row.names = FALSE)
 
 
 
@@ -2647,6 +2796,7 @@ both_bacter_plot <- plot_grid(
 plot_grid(both_bacter_plot, legend, rel_widths = c(4, 1))
 
 
+######extract Fibrobacterota, Flavobacterium, & Pedobacter 
 
 
 
