@@ -2571,16 +2571,80 @@ rgm_target_fams_summary_wide <- rgm_target_fams_summary %>%
 #write to CSV
 write.csv(rgm_target_fams_summary_wide, "RGM_target_families_abundance.csv", row.names = FALSE)
 
+#bar graph of bacteroidetes families 
+
+#rgm relative abundance
+rgm_bacter_rel <- transform_sample_counts(
+  rgm_bacter,
+  function(x) x / sum(x))
+rgm_df <- psmelt(rgm_bacter_rel) #melt long format
+rgm_bacter_family_avg <- rgm_df %>%
+  dplyr::group_by(Family, treatment, trt_month_soilAge) %>%
+  dplyr::summarise(
+    mean_RA = mean(Abundance),
+    sd_RA = sd(Abundance),
+    .groups = "drop") #have to call dplyr specifically
+
+#lia relative abundance 
+lia_bacter_rel <- transform_sample_counts(
+  lia_bacter,
+  function(x) x / sum(x))
+lia_df <- psmelt(lia_bacter_rel) #melt long format
+lia_bacter_family_avg <- lia_df %>%
+  dplyr::group_by(Family, treatment, trt_month_soilAge) %>%
+  dplyr::summarise(
+    mean_RA = mean(Abundance),
+    sd_RA = sd(Abundance),
+    .groups = "drop") #have to call dplyr specifically
 
 
 
+#plot time 
+bacter_families <- sort(unique(c(
+  as.character(rgm_bacter_family_avg$Family),
+  as.character(lia_bacter_family_avg$Family))))
 
+cols <- setNames(
+  colorRampPalette(brewer.pal(12, "Set3"))(length(bacter_families)),
+  bacter_families)
 
+rgm_bacter_plot <- ggplot(
+  rgm_bacter_family_avg,
+  aes(x = trt_month_soilAge,
+      y = mean_RA,
+      fill = Family)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = cols) +
+  labs(
+    title = "RGM Bacteroidota families",
+    x = "",
+    y = "Avg rel abundance") +
+  theme_bw() + 
+  theme()
+lia_bacter_plot <- ggplot(
+  lia_bacter_family_avg,
+  aes(x = trt_month_soilAge,
+      y = mean_RA,
+      fill = Family)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = cols) +
+  labs(
+    title = "LIA Bacteroidota families",
+    x = "",
+    y = "Avg rel abundance") +
+  theme_bw() + 
+  theme()
+rgm_bacter_plot + lia_bacter_plot
 
+#combine into a single legend for plotting 
+legend <- get_legend(rgm_bacter_plot)
 
-
-
-
+#plot combined figure 
+both_bacter_plot <- plot_grid(
+  rgm_bacter_plot + theme(legend.position = "none"),
+  lia_bacter_plot + theme(legend.position = "none"),
+  ncol = 2)
+plot_grid(both_bacter_plot, legend, rel_widths = c(4, 1))
 
 
 

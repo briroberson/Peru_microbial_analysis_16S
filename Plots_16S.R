@@ -1510,6 +1510,7 @@ allsoil[48:70,]<- lia_final_ab
 allsoil$trt_soil<- paste(allsoil$treatment, allsoil$soil, sep='_')
 allsoil$trt_soil<- factor(allsoil$trt_soil, levels=c('control_ab_pro_lia','latrine_ab_pro_lia','control_ab_pro_wetRGM','latrine_ab_pro_wetRGM','control_ab_pro_dryRGM','latrine_ab_pro_dryRGM'))
 write.csv(allsoil, 'allsoil_taxabar.csv')
+allsoil <- read.csv("allsoil_taxabar.csv")
 
 ggplot(allsoil, aes(x=trt_soil, y=avg_rel_ab, fill=Phylum ))+
   geom_bar(stat='identity') +
@@ -1580,3 +1581,13 @@ final_plot <- plot_grid(
   p2 + theme(legend.position = "none"),
   ncol = 2)
 plot_grid(final_plot, legend, rel_widths = c(4, 1))
+
+
+
+
+
+
+
+
+
+
