@@ -1378,7 +1378,7 @@ for(i in 1:length(comparisons)) {
 #if that doesnt work try this 
 simper.results <- purrr::map_dfr(comparisons, function(comp) {
   
-  as.data.frame(s[[comp]]) %>%
+  as.data.frame(simper_chrono_wet[[comp]]) %>%
     tibble::rownames_to_column("Species") %>%
     mutate(
       Comparison = comp,
@@ -1435,7 +1435,7 @@ simper.results <- c()
 
 for(i in 1:length(comparisons)) {
   require(tidyverse)
-  temp <- summary(simper_chrono_wet)[as.character(comparisons[i])] %>%
+  temp <- summary(simper_chrono_dry)[as.character(comparisons[i])] %>%
     as.data.frame()
   colnames(temp) <- gsub(
     paste(comparisons[i],".", sep = ""), "", colnames(temp))
@@ -1449,7 +1449,7 @@ for(i in 1:length(comparisons)) {
 #if that doesnt work try this 
 simper.results <- purrr::map_dfr(comparisons, function(comp) {
   
-  as.data.frame(s[[comp]]) %>%
+  as.data.frame(simper_chrono_dry[[comp]]) %>%
     tibble::rownames_to_column("Species") %>%
     mutate(
       Comparison = comp,
