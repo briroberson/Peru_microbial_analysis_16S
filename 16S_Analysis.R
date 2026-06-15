@@ -1387,7 +1387,7 @@ simper.results <- purrr::map_dfr(comparisons, function(comp) {
 })
 
 #filter for significant 
-simper.results %>%
+sig_asvs_chronoW <- simper.results %>%
   filter(p <= 0.05) %>%
   dplyr::select(Species, average, Comparison, Position)
 
@@ -1458,7 +1458,7 @@ simper.results <- purrr::map_dfr(comparisons, function(comp) {
 })
 
 #filter for significant 
-simper.results %>%
+sig_asvs_chronoDRGM <- simper.results %>%
   filter(p <= 0.05) %>%
   dplyr::select(Species, average, Comparison, Position)
 

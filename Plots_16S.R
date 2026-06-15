@@ -22,6 +22,7 @@ library(officer)
 library(RColorBrewer)
 library(patchwork)
 library(cowplot)
+library(ggrepel)
 
 
 ## Elevation plots----
@@ -518,6 +519,26 @@ pcoaW<-cmdscale(d=distance(filt_rare_wet2, method='wunifrac'), eig=T)
 
 #retrieve species scores for it
 spscorW<-as.data.frame(wascores(x = pcoaW$points, w = tasvW))
+#subset to top 10 significant asvs from simper to plot 
+spscorW$ASV <- rownames(spscorW)
+spscorW_top10 <- spscorW %>%
+  dplyr::filter(ASV %in% simper_chronoW_top10$species)
+#add taxonomy 
+tax_df <- as.data.frame(phyloseq::tax_table(filt_rare_wet2)) %>%
+  tibble::rownames_to_column("ASV")
+spscorW_top10 <- spscorW_top10 %>%
+  dplyr::left_join(tax_df, by = "ASV")
+#select lowest assigned taxonomy
+spscorW_top10 <- spscorW_top10 %>%
+  mutate(
+    tax_label = case_when(
+      !Genus %in% c("Incertae_Sedis", "Subgroup_10") ~ Genus,
+      Family != "Incertae_Sedis" ~ Family,
+      Order != "Incertae_Sedis" ~ Order,
+      Class != "Incertae_Sedis" ~ Class,
+      TRUE ~ Phylum
+    )
+  )
 
 #add the scores to the metadata
 metadata_wet2$axis01<- vegan::scores(pcoaW)[,1]
@@ -527,74 +548,48 @@ metadata_wet2$axis02<- vegan::scores(pcoaW)[,2]
 find_hull <- function(df) df[chull(df$axis01, df$axis02),]
 micro.hullsW <- ddply(metadata_wet2, "trt_class", find_hull)
 
-#plot it
-library(rcartocolor)
-
-# get 8 colors from Earth palate
-earth_cols <- carto_pal(8, "Earth")
-
-# assign first half (browns) to control, second half (blues) to latrine
-pcoa_cols <- c(
-  "control_LIA"        = earth_cols[1],
-  "control_LIA-1931"   = earth_cols[2],
-  "control_1931-1962"  = earth_cols[3],
-  "control_1984-2024"  = earth_cols[4],
-  
-  "latrine_LIA"        = earth_cols[5],
-  "latrine_LIA-1931"   = earth_cols[6],
-  "latrine_1931-1962"  = earth_cols[7],
-  "latrine_1984-2024"  = earth_cols[8]
-)
-
-temps_cols <- carto_pal(9, "Temps")
-
-pcoa_cols2 <- c(
-  "control_LIA"        = temps_cols[1],
-  "control_LIA-1931"   = temps_cols[2],
-  "control_1931-1962"  = temps_cols[3],
-  "control_1984-2024"  = temps_cols[4],
-  
-  "latrine_LIA"        = temps_cols[6],
-  "latrine_LIA-1931"   = temps_cols[7],
-  "latrine_1931-1962"  = temps_cols[8],
-  "latrine_1984-2024"  = temps_cols[9]
-)
+#plot!
+class_labels <- c(
+  "control_LIA" = "LIA Reference",
+  "control_LIA-1931" = "LIA–1931 Reference",
+  "control_1931-1962" = "1931–1962 Reference",
+  "control_1984-2024" = "1984–2024 Reference",
+  "latrine_LIA" = "LIA Latrine",
+  "latrine_LIA-1931" = "LIA–1931 Latrine",
+  "latrine_1931-1962" = "1931–1962 Latrine",
+  "latrine_1984-2024" = "1984–2024 Latrine")
 
 wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
   geom_polygon(data = micro.hullsW, 
                aes(colour = trt_class, fill = trt_class), alpha = 0.1, show.legend = F) +
-  # geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW, arrow=arrow())+
-  geom_point(size = 2, aes(colour = trt_class, shape = class))+ 
+  geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW_top10, arrow=arrow())+
+  ggrepel::geom_text_repel(
+    data = spscorW_top10,
+    aes(V1, V2, label = tax_label),
+    size = 3,
+    max.overlaps = Inf,
+    box.padding = 0.4,
+    point.padding = 0.3,
+    segment.color = "grey50") + 
+  geom_point(size = 2, aes(colour = trt_class))+ 
   scale_colour_manual(
     values = pcoa_cols2,
-    breaks = c(
-      "control_LIA",
-      "control_LIA-1931",
-      "control_1931-1962",
-      "control_1984-2024",
-      "latrine_LIA",
-      "latrine_LIA-1931",
-      "latrine_1931-1962",
-      "latrine_1984-2024"
-    )
-  ) +
-  scale_fill_manual(
-    values = pcoa_cols2,
-    breaks = c(
-      "control_LIA",
-      "control_LIA-1931",
-      "control_1931-1962",
-      "control_1984-2024",
-      "latrine_LIA",
-      "latrine_LIA-1931",
-      "latrine_1931-1962",
-      "latrine_1984-2024"
-    )
-  ) + 
+    breaks = names(class_labels),
+    labels = class_labels) + 
+scale_fill_manual(
+  values = pcoa_cols2,
+  breaks = names(class_labels),
+  labels = class_labels) + 
   xlab("PCoA 1") +
   ylab("PCoA 2") +
-  labs(colour = "Treatment & Chronosequence Class", title='by Class') +
-  theme_bw() 
+  labs(title='(a)', color = NULL) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold",color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
 wetbeta_chrono
 
 
