@@ -521,6 +521,13 @@ summary(m_wet_vrai_high)
 Anova(m_wet_vrai_high, type='III')
 qqnorm(residuals(m_wet_vrai_high))
 
+m_wet_vrai_both <- m_wet_vrai <- lmer(Observed ~ Vicuna.RAI * elev_group + (1 | latrine_trt_month),
+    data = critter_wet_split)
+summary(m_wet_vrai_both)
+Anova(m_wet_vrai_both, type='III')
+qqnorm(residuals(m_wet_vrai_high))
+
+
 
 #all vert richness
 m_wet_vertrich_rich<- lmer(Observed~Animal.Richness*elevation_sc+(1|latrine_trt_month), data=critter_wet)
@@ -2796,7 +2803,38 @@ both_bacter_plot <- plot_grid(
 plot_grid(both_bacter_plot, legend, rel_widths = c(4, 1))
 
 
-######extract Fibrobacterota, Flavobacterium, & Pedobacter 
+######extract Fibrobacterota, Flavobacterium, & Pedobacter with sequences for BLAST
+
+#read in sequences 
+rep_seqs <- read_qza("Jan25_rep-seqs.qza")$data
+seq_df <- data.frame(
+  ASV = names(rep_seqs),
+  Sequence = as.character(rep_seqs),
+  stringsAsFactors = FALSE)
+
+#RGM
+rgm_ffp <- subset_taxa(
+  filt_rare_RGM2,
+  Phylum == "Fibrobacterota" |
+    Genus == "Flavobacterium" |
+    Genus == "Pedobacter")
+
+#taxonomy
+tax_df <- as.data.frame(tax_table(filt_rare_phy_16s))
+tax_df$ASV <- rownames(tax_df)
+
+#all
+target_taxa <- tax_df %>%
+  filter(Phylum == "Fibrobacterota" |
+      Genus == "Flavobacterium" |
+      Genus == "Pedobacter")
+
+fibro_flavo_pedobac <- target_taxa %>%
+  left_join(seq_df, by = "ASV")
+
+write.csv(fibro_flavo_pedobac, "fibro_flavo_pedobac_BLAST.csv")
+
+
 
 
 
