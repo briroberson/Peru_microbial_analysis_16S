@@ -1132,6 +1132,10 @@ plot_ts_heatmap(Phy_relabRt, metaDryRGM2, 0.01, "latrine_trt", colors=c('#fcfdbf
 
 ##By sample 
 
+#make taxa a row
+Phy_relabLt$taxa<- row.names(Phy_relabLt)
+Phy_relabWt$taxa<- row.names(Phy_relabWt)
+Phy_relabRt$taxa<- row.names(Phy_relabRt)
 #set global color scheme with unique, consistent colors for taxa 
 all_taxa <- sort(unique(c(
   Phy_relabLt$taxa,  
@@ -1142,8 +1146,6 @@ cols <- setNames(colorRampPalette(brewer.pal(12, "Set3"))(length(all_taxa)), all
 
 #LIA using phylum
 
-#make taxa a row
-Phy_relabLt$taxa<- row.names(Phy_relabLt)
 #make long format & join metadata 
 Phy_relabLtlong<- pivot_longer(Phy_relabLt, names_to='sample', cols=1:8)
 Phy_relabLtlong <- Phy_relabLtlong %>%
@@ -1188,8 +1190,6 @@ ggplot(Phy_relabLtlong,
 
 #RGM Wet
 
-#make taxa a row 
-Phy_relabWt$taxa<- row.names(Phy_relabWt)
 #make long format & join metadata 
 Phy_relabWtlong<- pivot_longer(Phy_relabWt, names_to='sample', cols=1:38)
 Phy_relabWtlong <- Phy_relabWtlong %>%
@@ -1230,8 +1230,7 @@ ggplot(Phy_relabWtlong,
 
 
 #RGM dry
-Phy_relabRt$taxa<- row.names(Phy_relabRt)
-#make long format & join metadata 
+
 Phy_relabRtlong<- pivot_longer(Phy_relabRt, names_to='sample', cols=1:24)
 Phy_relabRtlong <- Phy_relabRtlong %>%
   left_join(metaDryRGM2 %>% select(SampleID, treatment, latrine),
@@ -1544,23 +1543,42 @@ wet_sub_da$Soil <- case_when(
 wet_sub_da$Phylum <- as.character(wet_sub_da$Phylum)
 dry_sub_da$Phylum <- as.character(dry_sub_da$Phylum)
 
+#list of taxa that were significant for differential abundance 
+sigphyla_wet_ref <- c("Abditibacteriota", "Armatimonadota", "Deinococcota", "Gemmatimonadota", "Nitrospirota")
+sigphyla_wet_lat <- c("Thermodesulfobacteriota" , "Bacillota")
+sigphyla_dry_lat <- c("Fibrobacterota", "Bacillota")
+
+allsoil$Phylum_lab <- allsoil$Phylum
+allsoil$Phylum_lab <- ifelse(
+  allsoil$Phylum %in% c(sigphyla_wet_ref, sigphyla_wet_lat, sigphyla_dry_lat),
+  paste0("**", allsoil$Phylum_lab, "**"),
+  allsoil$Phylum_lab)
+
 
 # PLOT 1 — wet season LIA & RGM
+sig <- c(sigphyla_wet_ref, sigphyla_wet_lat)
 p1 <- ggplot(wet_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
   geom_bar(stat = "identity") +
   facet_wrap(~Soil) +
-  scale_fill_manual(values = cols) +
+  scale_fill_manual(values = cols, drop = FALSE, labels = function(x) {
+      ifelse(x %in% sig, paste0("**", x, "** ★"), x)
+    }) +
+  guides(fill = guide_legend(label.theme = element_markdown())) + 
   labs(
     title = "Wet Season",
     x = "",
-    y = "Relative Abundance" ) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
+    y = "Relative Abundance"
+  ) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 
 # PLOT 2 — dry season
 p2 <- ggplot(dry_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = cols) +
+  scale_fill_manual(values = cols, drop = FALSE, labels = function(x) {
+    ifelse(x %in% sigphyla_dry_lat, paste0("**", x, "** ★"), x)
+  }) +
+  guides(fill = guide_legend(label.theme = element_markdown())) + 
   labs(
     title = "Dry Season (RGM)",
     x = "",
@@ -1579,9 +1597,9 @@ plot_grid(final_plot, legend, rel_widths = c(4, 1))
 
 
 
-
-
-
+(p1 | p2) +
+  plot_annotation(title = "(a)", theme = theme(
+    plot.title = element_text(hjust = 0.5)))
 
 
 

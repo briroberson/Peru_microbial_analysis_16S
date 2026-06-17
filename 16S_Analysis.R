@@ -1098,8 +1098,17 @@ permanova_pairwise(distance(filt_rare_wet2, method='wunifrac'), grp=metadata_wet
 #beta dispersion
 wet_betadis<-betadisper(distance(filt_rare_wet2, method='wunifrac'), group=metadata_wet2$trt_soilAge, type='median')
 boxplot(wet_betadis)
-
 permutest(wet_betadis, permutations=999)
+
+#pairwise to determine which differ significantly 
+distances <- wet_betadis$distances
+mod <- aov(distances ~ metadata_wet2$trt_soilAge)
+qqnorm(residuals(mod))
+shapiro.test(residuals(mod))
+TukeyHSD(wet_betadis)
+
+permutest(wet_betadis, pairwise = TRUE, permutations = 999)
+
 
 ##chronosequence
 set.seed(200)
@@ -1185,6 +1194,10 @@ filt_rare_wet2_RGM <- subset_samples(filt_rare_wet2, soilAge == "rgm")
 wetRGM_betadis<-betadisper(distance(filt_rare_wet2_RGM, method='wunifrac'), group=metadata_wet2_RGM$treatment, type='median')
 boxplot(wetRGM_betadis)
 permutest(wetRGM_betadis)
+#post hoc to see which treatments are different 
+
+
+
 
 # Simper ----
 ##### 7. Try Simper for testing community difference
