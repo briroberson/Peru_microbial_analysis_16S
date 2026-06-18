@@ -1373,22 +1373,8 @@ comparisons <- c(
   "latrine_1984-2024_latrine_LIA",
   "control_LIA_latrine_LIA")
 
-simper.results <- c()
 
-for(i in 1:length(comparisons)) {
-  require(tidyverse)
-  temp <- summary(simper_chrono_wet)[as.character(comparisons[i])] %>%
-    as.data.frame()
-  colnames(temp) <- gsub(
-    paste(comparisons[i],".", sep = ""), "", colnames(temp))
-  temp <- temp %>%
-    mutate(Comparison = comparisons[i],
-           Position = row_number()) %>%
-    rownames_to_column(var = "Species")
-  simper.results <- rbind(simper.results, temp)
-}
 
-#if that doesnt work try this 
 simper.results <- purrr::map_dfr(comparisons, function(comp) {
   
   as.data.frame(simper_chrono_wet[[comp]]) %>%
@@ -1401,13 +1387,13 @@ simper.results <- purrr::map_dfr(comparisons, function(comp) {
 
 #filter for significant 
 sig_asvs_chronoW <- simper.results %>%
-  filter(p <= 0.05) %>%
-  dplyr::select(Species, average, Comparison, Position)
+  filter(p <= 0.05) 
+
 
 #create a df of significant ASVs with taxonomy 
 taxachronoW <- as.data.frame(tax_table(filt_rare_wet2)) %>%
   tibble::rownames_to_column("ASV")
-simper_taxa_chronoWsig <- simper.results %>%
+simper_taxa_chronoWsig <- sig_asvs_chronoW %>%
   left_join(taxachronoW, by = c("Species" = "ASV"))
 #grab top 10 only 
 simper_chronoW_top10 <- simper_taxa_chronoWsig %>%
@@ -1444,41 +1430,24 @@ comparisons <- c(
   "latrine_1984-2024_latrine_1931-1962",
   "control_1931-1962_latrine_1931-1962")
 
-simper.results <- c()
 
-for(i in 1:length(comparisons)) {
-  require(tidyverse)
-  temp <- summary(simper_chrono_dry)[as.character(comparisons[i])] %>%
-    as.data.frame()
-  colnames(temp) <- gsub(
-    paste(comparisons[i],".", sep = ""), "", colnames(temp))
-  temp <- temp %>%
-    mutate(Comparison = comparisons[i],
-           Position = row_number()) %>%
-    rownames_to_column(var = "Species")
-  simper.results <- rbind(simper.results, temp)
-}
-
-#if that doesnt work try this 
 simper.results <- purrr::map_dfr(comparisons, function(comp) {
   
   as.data.frame(simper_chrono_dry[[comp]]) %>%
     tibble::rownames_to_column("Species") %>%
     mutate(
       Comparison = comp,
-      Position = row_number()
-    )
+      Position = row_number())
 })
 
 #filter for significant 
 sig_asvs_chronoDRGM <- simper.results %>%
-  filter(p <= 0.05) %>%
-  dplyr::select(Species, average, Comparison, Position)
+  filter(p <= 0.05)
 
 #create a df of significant ASVs with taxonomy 
 taxachronoDRGM <- as.data.frame(tax_table(filt_dryRGM2)) %>%
   tibble::rownames_to_column("ASV")
-simper_taxa_chronoDRGMsig <- simper.results %>%
+simper_taxa_chronoDRGMsig <- sig_asvs_chronoDRGM %>%
   left_join(taxachronoDRGM, by = c("Species" = "ASV"))
 #grab top 10 only 
 simper_chronoDRGM_top10 <- simper_taxa_chronoDRGMsig %>%
