@@ -2151,7 +2151,7 @@ up = ceiling(max(phyl_fig$value))
 fig_phyl = phyl_fig %>%
   ggplot(aes(x = group, y = taxon, fill = value)) + 
   geom_tile(color = "black") +
-  scale_fill_gradient2(low = "cyan3", high = "purple3", mid = "white", 
+  scale_fill_gradient2(low = "#68CDA8", high = "#9C6EB0", mid = "white", 
                        na.value = "white", midpoint = 0, limit = c(lo, up),
                        breaks=c(4,-2), labels=c('More abundant \
 on latrines','More abundant \

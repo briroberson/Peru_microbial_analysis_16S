@@ -407,10 +407,10 @@ ggplot(metadata_wet, aes(class, Observed)) +
 
 #or grouped by class 
 wetrich_chrono_plot <- ggplot(metadata_wet, aes(treatment, Observed)) +
-  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_boxplot(aes(fill=treatment)) + #adds boxplot
   geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
   labs(x = NULL, y = NULL, title = "a)") +
-  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_fill_manual(values=c("#4DD7CE","#9C6EB0"), guide='none')+ #colors the two different treatments
   scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
   scale_x_discrete(labels = c(
     control = "Reference",
@@ -418,6 +418,7 @@ wetrich_chrono_plot <- ggplot(metadata_wet, aes(treatment, Observed)) +
   theme_bw() +
   theme+
   facet_wrap(~class, nrow = 1)
+wetrich_chrono_plot
 
 ## Wet subset Shannon----
 ggplot(metadata_wet, aes(treatment, Shannon)) +
@@ -445,10 +446,10 @@ ggplot(metaDryRGM_both, aes(class, Observed)) +
 
 #or by class 
 dryrich_chrono_plot <- ggplot(metaDryRGM_both, aes(treatment, Observed)) +
-  geom_boxplot(alpha = 0.5, aes(fill=treatment)) + #adds boxplot
+  geom_boxplot(aes(fill=treatment)) + #adds boxplot
   geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
   labs(x = NULL, y = NULL, title = "b)") +
-  scale_fill_manual(values=c('cyan3','purple3'), guide='none')+ #colors the two different treatments
+  scale_fill_manual(values=c("#68CDA8","#9C6EB0"), guide='none')+ #colors the two different treatments
   scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
   scale_x_discrete(labels = c(
     control = "Reference",
