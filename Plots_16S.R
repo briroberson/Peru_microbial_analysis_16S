@@ -23,6 +23,7 @@ library(RColorBrewer)
 library(patchwork)
 library(cowplot)
 library(ggrepel)
+library(ggtext)
 
 
 ## Elevation plots----
@@ -182,6 +183,24 @@ ggplot(critter_wet, aes(x=Vicuna.RAI, y=Observed, color = elevation)) +
   labs(title = "RAI v prokaryote richness") + 
   theme+
   theme_bw()
+
+ggplot(critter_wet, aes(x=elevation, y=Observed, color = Vicuna.RAI)) + 
+  geom_point(size = 3, aes(color = Vicuna.RAI)) + 
+  geom_smooth(method = 'lm', color = "black", fill = "lightgray", alpha = 0.2) + 
+  scale_color_gradient(low = '#2b83ba', high = '#d7191c') + 
+  labs(title = "RAI v prokaryote richness") + 
+  theme+
+  theme_bw()
+
+ggplot(critter_wet_split, aes(x=Vicuna.RAI, y=Observed, color = Vicuna.RAI)) + 
+  geom_point(size = 3, aes(color = Vicuna.RAI)) + 
+  geom_smooth(method = 'lm', color = "black", fill = "lightgray", alpha = 0.2) + 
+  scale_color_gradient(low = '#2b83ba', high = '#d7191c') + 
+  labs(title = "RAI v prokaryote richness") + 
+  facet_wrap(~elev_group) + 
+  theme+
+  theme_bw()
+
 
   #or 3d 
 library (plotly)
@@ -1544,7 +1563,7 @@ wet_sub_da$Phylum <- as.character(wet_sub_da$Phylum)
 dry_sub_da$Phylum <- as.character(dry_sub_da$Phylum)
 
 #list of taxa that were significant for differential abundance 
-sigphyla_wet_ref <- c("Abditibacteriota", "Armatimonadota", "Deinococcota", "Gemmatimonadota", "Nitrospirota")
+sigphyla_wet_ref <- c("Abditibacteriota", "Armatimonadota", "Deinococcota", "Gemmatimonadota", "Nitrospirota") 
 sigphyla_wet_lat <- c("Thermodesulfobacteriota" , "Bacillota")
 sigphyla_dry_lat <- c("Fibrobacterota", "Bacillota")
 
@@ -1555,14 +1574,26 @@ allsoil$Phylum_lab <- ifelse(
   allsoil$Phylum_lab)
 
 
-# PLOT 1 — wet season LIA & RGM
+
+# PLOT 1 — wet season LIA & RGM, with symbols for DA 
 sig <- c(sigphyla_wet_ref, sigphyla_wet_lat)
 p1 <- ggplot(wet_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
   geom_bar(stat = "identity") +
   facet_wrap(~Soil) +
-  scale_fill_manual(values = cols, drop = FALSE, labels = function(x) {
-      ifelse(x %in% sig, paste0("**", x, "** ★"), x)
-    }) +
+ # scale_fill_manual(values = cols, drop = FALSE, labels = function(x) {
+ #     ifelse(x %in% sig, paste0("**", x, "** ★"), x)
+  #  }) +
+  scale_fill_manual(
+    values = cols,
+    drop = FALSE,
+    labels = function(x) {
+      ifelse(
+        x %in% sigphyla_wet_ref,
+        paste0("**", x, "** −"),
+        ifelse(
+          x %in% sigphyla_wet_lat,
+          paste0("**", x, "** +"),
+          x) ) }) + 
   guides(fill = guide_legend(label.theme = element_markdown())) + 
   labs(
     title = "Wet Season",
@@ -1575,9 +1606,17 @@ p1 <- ggplot(wet_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
 # PLOT 2 — dry season
 p2 <- ggplot(dry_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = cols, drop = FALSE, labels = function(x) {
-    ifelse(x %in% sigphyla_dry_lat, paste0("**", x, "** ★"), x)
-  }) +
+ # scale_fill_manual(values = cols, drop = FALSE, labels = function(x) {
+ #   ifelse(x %in% sigphyla_dry_lat, paste0("**", x, "** ★"), x)
+ # }) +
+  scale_fill_manual(
+    values = cols,
+    drop = FALSE,
+    labels = function(x) {
+      ifelse(
+        x %in% sigphyla_dry_lat,
+        paste0("**", x, "** +"),
+        x)} ) + 
   guides(fill = guide_legend(label.theme = element_markdown())) + 
   labs(
     title = "Dry Season (RGM)",
@@ -1596,7 +1635,7 @@ final_plot <- plot_grid(
 plot_grid(final_plot, legend, rel_widths = c(4, 1))
 
 
-
+#current plot
 (p1 | p2) +
   plot_annotation(title = "(a)", theme = theme(
     plot.title = element_text(hjust = 0.5)))
