@@ -1160,7 +1160,16 @@ all_taxa <- sort(unique(c(
   Phy_relabLt$taxa,  
   Phy_relabWt$taxa, 
   Phy_relabRt$taxa)))
-cols <- setNames(colorRampPalette(brewer.pal(12, "Set3"))(length(all_taxa)), all_taxa)
+cols <- setNames(colorRampPalette(brewer.pal(12, "Paired"))(length(all_taxa)), all_taxa)
+
+base_cols <- c("#87CEEBFF", "#32CD32FF", "#BA55D3FF", "#F08080FF", "#4682B4FF", "#9ACD32FF", "#40E0D0FF", "#FF69B4FF", "#F0E68CFF", "#D2B48CFF", "#8FBC8BFF", "#6495EDFF", "#DDA0DDFF", "#5F9EA0FF", "#FFDAB9FF", "#FFA07AFF")
+cols <- setNames(colorRampPalette(base_cols)(length(all_taxa)), all_taxa)
+
+
+#list of taxa that were significant for differential abundance 
+sigphyla_wet_ref <- c("Abditibacteriota", "Armatimonadota", "Deinococcota", "Gemmatimonadota", "Nitrospirota") 
+sigphyla_wet_lat <- c("Thermodesulfobacteriota" , "Bacillota", "Fibrobacterota")
+sigphyla_dry_lat <- c("Fibrobacterota", "Bacillota")
 
 
 #LIA using phylum
@@ -1201,9 +1210,10 @@ ggplot(Phy_relabLtlong,
                  control = "Reference",
                  latrine = "Latrine" ))) +
   scale_x_discrete(labels = label_vec) +
-  labs(x = "Site", y = "Relative abundance", fill = "Phylum" ) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)") +
   scale_fill_manual(values = cols) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) 
+
 
 
 
@@ -1231,6 +1241,15 @@ sample_labels <- Phy_relabWtlong %>%
 label_vec <- setNames(
   sample_labels$latrine,
   sample_labels$sample)
+
+#significant phyla 
+Phy_relabWtlong$Phylum_lab <- Phy_relabWtlong$taxa
+Phy_relabWtlong$Phylum_lab <- ifelse(
+  Phy_relabWtlong$taxa %in% c(sigphyla_wet_ref, sigphyla_wet_lat),
+  paste0("**", Phy_relabWtlong$Phylum_lab, "**"),
+  Phy_relabWtlong$Phylum_lab)
+sig <- c(sigphyla_wet_ref, sigphyla_wet_lat)
+
 #plot
 ggplot(Phy_relabWtlong, 
        aes(x = sample, y = value, fill = taxa)) +
@@ -1243,8 +1262,20 @@ ggplot(Phy_relabWtlong,
                  control = "Reference",
                  latrine = "Latrine" ))) +
   scale_x_discrete(labels = label_vec) +
-  labs(x = "Site", y = "Relative abundance", fill = "Phylum" ) +
-  scale_fill_manual(values = cols) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)") +
+  #scale_fill_manual(values = cols) +
+  scale_fill_manual(
+    values = cols,
+    drop = FALSE,
+    labels = function(x) {
+      ifelse(
+        x %in% sigphyla_wet_ref,
+        paste0("**", x, "** −"),
+        ifelse(
+          x %in% sigphyla_wet_lat,
+          paste0("**", x, "** +"),
+          x) ) }) + 
+  guides(fill = guide_legend(label.theme = element_markdown())) +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 
@@ -1264,6 +1295,7 @@ Phy_relabRtlong$sample <- factor(
   Phy_relabRtlong$sample,
   levels = sample_order)
 
+
 #format sample names 
 sample_labels <- Phy_relabRtlong %>%
   distinct(sample, latrine) %>%
@@ -1271,6 +1303,16 @@ sample_labels <- Phy_relabRtlong %>%
 label_vec <- setNames(
   sample_labels$latrine,
   sample_labels$sample)
+
+#significant phyla 
+Phy_relabRtlong$Phylum_lab <- Phy_relabRtlong$taxa
+Phy_relabRtlong$Phylum_lab <- ifelse(
+  Phy_relabRtlong$taxa %in% c(sigphyla_dry_lat),
+  paste0("**", Phy_relabRtlong$Phylum_lab, "**"),
+  Phy_relabRtlong$Phylum_lab)
+sig <- c(sigphyla_dry_lat)
+
+
 #plot
 ggplot(Phy_relabRtlong, 
        aes(x = sample, y = value, fill = taxa)) +
@@ -1283,10 +1325,18 @@ ggplot(Phy_relabRtlong,
                  control = "Reference",
                  latrine = "Latrine" ))) +
   scale_x_discrete(labels = label_vec) +
-  labs(x = "Site", y = "Relative abundance", fill = "Phylum" ) +
-  scale_fill_manual(values = cols) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)" ) +
+ # scale_fill_manual(values = cols) +
+  scale_fill_manual(
+    values = cols,
+    drop = FALSE,
+    labels = function(x) {
+      ifelse(
+        x %in% sigphyla_dry_lat,
+        paste0("**", x, "** +"),
+        x)} ) + 
+  guides(fill = guide_legend(label.theme = element_markdown())) + 
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
-
 
 
 
