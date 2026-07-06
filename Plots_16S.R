@@ -233,6 +233,18 @@ ggplot(critter_wet_split, aes(x=Vicuna.RAI, y=Observed, color=elev_group))+
   theme_bw()+
   labs(title='Wet RAI vs 16S Richness')
 
+ggplot(critter_wet_split2, aes(x=Vicuna.RAI, y=Observed)) + 
+  geom_point(size = 3, alpha = 0.8, aes(color = elevation)) + 
+  scale_color_gradient(low ="#87CEEB", high = "#F0E68CFF") + 
+  geom_smooth(method = 'lm', color = "black", fill = "lightgray", alpha = 0.2) + 
+  labs(title = "(b)", x = 'RAI', y = 'Eukaryote richness') + 
+  facet_wrap(~elev_group) + 
+  labs(
+    title = "(a)",
+    y = "Prokaryote richness",
+    color = "Elevation (m.a.s.l.)") + 
+  theme_bw() + 
+  theme
 
 
 
