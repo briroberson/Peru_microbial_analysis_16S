@@ -236,16 +236,67 @@ ggplot(critter_wet_split, aes(x=Vicuna.RAI, y=Observed, color=elev_group))+
 ggplot(critter_wet_split2, aes(x=Vicuna.RAI, y=Observed)) + 
   geom_point(size = 3, alpha = 0.8, aes(color = elevation)) + 
   scale_color_gradient(low ="#87CEEB", high = "#F0E68CFF") + 
-  geom_smooth(method = 'lm', color = "black", fill = "lightgray", alpha = 0.2) + 
+  geom_smooth(
+    aes(color = elev_group, fill = elev_group),
+    method = "lm",
+    alpha = 0.2)  +
   labs(title = "(b)", x = 'RAI', y = 'Eukaryote richness') + 
   facet_wrap(~elev_group) + 
   labs(
     title = "(a)",
     y = "Prokaryote richness",
     color = "Elevation (m.a.s.l.)") + 
-  theme_bw() + 
-  theme
+  theme_bw() +
+  theme(strip.text = element_text(face = "bold", size = 16), 
+        legend.title = element_text(size = 14, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold"), 
+        plot.title = element_text(size = 16, hjust = 0.5),
+        axis.title.y = element_text(face="bold", size = 18), 
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
 
+critter_wet_split$elev_group <- factor(
+  critter_wet_split$elev_group,
+  levels = c("Low elevation", "High elevation"))
+
+ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) + 
+  geom_point(size = 3, aes(color = elevation)) + 
+  scale_color_gradient(
+    low = "#5281B0",
+    high = "#fae100" ,
+    name = "Elevation") +
+  ggnewscale::new_scale_color() +
+  geom_smooth(
+    aes(color = elev_group, fill = elev_group),
+    method = "lm",
+    alpha = 0.3 , linewidth = 1.5) +
+  scale_color_manual(
+    values = c(
+      "Low elevation" = "#87CEEB",
+      "High elevation" = "#F0E68CFF"),
+    guide = "none") +
+  scale_fill_manual(
+    values = c(
+      "Low elevation" = "#87CEEB",
+      "High elevation" = "#F0E68CFF"),
+    guide = "none" ) +
+  facet_wrap(~elev_group) +
+  labs(
+    title = "(a)",
+    x = "RAI",
+    y = "Prokaryote richness") +
+  theme_bw() +
+  theme(strip.text = element_text(face = "bold", size = 16), 
+        legend.title = element_text(size = 14, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold"), 
+        plot.title = element_text(size = 16, hjust = 0.5),
+        axis.title.y = element_text(face="bold", size = 18), 
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
 
 
 ## Alpha diversity plot----
@@ -427,8 +478,17 @@ wetrich_chrono_plot <- ggplot(metadata_wet, aes(treatment, Observed)) +
   scale_x_discrete(labels = c(
     control = "Reference",
     latrine = "Latrine")) +
+  labs(color = "Elevation") + 
   theme_bw() +
-  theme+
+  theme(strip.text = element_text(face = "bold", size = 16), 
+        legend.title = element_text(size = 14, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold"), 
+        plot.title = element_text(size = 16, hjust = 0.5),
+        axis.title.y = element_text(face="bold", size = 18), 
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))+
   facet_wrap(~class, nrow = 1)
 wetrich_chrono_plot
 
@@ -553,15 +613,15 @@ pcoaW<-cmdscale(d=distance(filt_rare_wet2, method='wunifrac'), eig=T)
 spscorW<-as.data.frame(wascores(x = pcoaW$points, w = tasvW))
 #subset to top 10 significant asvs from simper to plot 
 spscorW$ASV <- rownames(spscorW)
-spscorW_top10 <- spscorW %>%
-  dplyr::filter(ASV %in% simper_chronoW_top10$species)
+spscorW_top5 <- spscorW %>%
+  dplyr::filter(ASV %in% simper_chronoW_top5$species)
 #add taxonomy 
 tax_df <- as.data.frame(phyloseq::tax_table(filt_rare_wet2)) %>%
   tibble::rownames_to_column("ASV")
-spscorW_top10 <- spscorW_top10 %>%
+spscorW_top5 <- spscorW_top5 %>%
   dplyr::left_join(tax_df, by = "ASV")
 #select lowest assigned taxonomy
-spscorW_top10 <- spscorW_top10 %>%
+spscorW_top5 <- spscorW_top5 %>%
   mutate(
     tax_label = case_when(
       !Genus %in% c("Incertae_Sedis", "Subgroup_10") ~ Genus,
@@ -581,6 +641,7 @@ find_hull <- function(df) df[chull(df$axis01, df$axis02),]
 micro.hullsW <- ddply(metadata_wet2, "trt_class", find_hull)
 
 #plot!
+#labels
 class_labels <- c(
   "control_LIA" = "LIA Reference",
   "control_LIA-1931" = "LIA–1931 Reference",
@@ -590,44 +651,9 @@ class_labels <- c(
   "latrine_LIA-1931" = "LIA–1931 Latrine",
   "latrine_1931-1962" = "1931–1962 Latrine",
   "latrine_1984-2024" = "1984–2024 Latrine")
-
-wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
-  geom_polygon(data = micro.hullsW, 
-               aes(colour = trt_class, fill = trt_class), alpha = 0.1, show.legend = F) +
-  geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW_top10, arrow=arrow())+
-  ggrepel::geom_text_repel(
-    data = spscorW_top10,
-    aes(V1, V2, label = tax_label),
-    size = 3,
-    max.overlaps = Inf,
-    box.padding = 0.4,
-    point.padding = 0.3,
-    segment.color = "grey50") + 
-  geom_point(size = 2, aes(colour = trt_class))+ 
-  scale_colour_manual(
-    values = pcoa_cols2,
-    breaks = names(class_labels),
-    labels = class_labels) + 
-scale_fill_manual(
-  values = pcoa_cols2,
-  breaks = names(class_labels),
-  labels = class_labels) + 
-  xlab("PCoA 1") +
-  ylab("PCoA 2") +
-  labs(title='(a)', color = NULL) +
-  theme_bw() +
-  theme(
-    plot.title = element_text(size = 16, hjust = 0.5),
-    axis.title.y = element_text(face="bold", size = 18), 
-    axis.text.y = element_text(size = 16),
-    axis.title.x = element_text(size = 18, face = "bold",color = "black"),
-    plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
-wetbeta_chrono
-
-
-control_cols <- colorRampPalette(c("#b3de69", "cyan"))(4)
-latrine_cols <- colorRampPalette(c("#fb8072", "purple1"))(4)
-
+#colors
+control_cols <- c("#9ACD32", "#4ACD66", "#59DAA2","#4DD7CE")
+latrine_cols <- c("#F7A7A0", "#D682BA","#C15BC7","#9C6EB0")
 pcoa_cols2 <- c(
   "control_LIA"       = control_cols[1],
   "control_LIA-1931"  = control_cols[2],
@@ -637,9 +663,62 @@ pcoa_cols2 <- c(
   "latrine_LIA"       = latrine_cols[1],
   "latrine_LIA-1931"  = latrine_cols[2],
   "latrine_1931-1962" = latrine_cols[3],
-  "latrine_1984-2024" = latrine_cols[4]
-)
+  "latrine_1984-2024" = latrine_cols[4])
+#axis %s variation explained
+var_exp <- round(100 * pcoaW$eig / sum(pcoaW$eig[pcoaW$eig > 0]), 1)
 
+
+wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
+  geom_polygon(data = micro.hullsW, 
+               aes(colour = trt_class, fill = trt_class), alpha = 0.4, linejoin = "round", show.legend = F) +
+  geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW_top5, arrow=arrow(length = unit(0.1, "cm"), type = "closed"))+
+  geom_point(size = 2, aes(colour = trt_class))+ 
+  ggrepel::geom_text_repel(
+    data = spscorW_top5,
+    aes(V1, V2, label = tax_label),
+    size = 3.5,
+    max.overlaps = Inf,
+    box.padding = 0.4,
+    point.padding = 0.3,
+    segment.color = "black") + 
+  scale_colour_manual(
+    values = pcoa_cols2,
+    breaks = names(class_labels),
+    labels = class_labels) + 
+  scale_fill_manual(
+    values = pcoa_cols2,
+    breaks = names(class_labels),
+    labels = class_labels) + 
+  xlab(paste0("PCoA 1 (", var_exp[1], "%)")) +
+  ylab(paste0("PCoA 2 (", var_exp[2], "%)")) + 
+  labs(title='(a)', color = NULL) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    axis.line = element_line(colour = "black") , 
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold",color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm") ,
+    legend.position = "bottom",
+    legend.text = element_text(size = 14, face = "bold"),
+    legend.title = element_text(size = 15, face = "bold"),
+    legend.key.width = unit(0.4, "cm"),
+    legend.key.height = unit(0.7, "cm"),
+    legend.spacing.y = unit(0.5, "cm"),
+    legend.box.spacing = unit(1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5),
+    legend.key = element_rect(
+      colour = "black",
+      fill = "white" )) +
+  guides(
+    colour = guide_legend(override.aes = list(size = 2.75)),
+    fill = guide_legend(ncol = 4, override.aes = list(alpha = 0.1)))
+wetbeta_chrono
 
 ##### just LIA----
 #get just lia phyloseq and metadata
@@ -1225,7 +1304,31 @@ ggplot(Phy_relabLtlong,
   scale_x_discrete(labels = label_vec) +
   labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)") +
   scale_fill_manual(values = cols) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1)) 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))  +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold",color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm") ,
+    strip.text = element_text(face = "bold", size = 16),
+    legend.position = "right",
+    legend.text = element_text(size = 10, face = "bold"),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.width = unit(0.3, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5)) + 
+  guides(fill = guide_legend(
+      ncol = 1,          
+      byrow = TRUE))
+
 
 
 
@@ -1288,8 +1391,33 @@ ggplot(Phy_relabWtlong,
           x %in% sigphyla_wet_lat,
           paste0("**", x, "** +"),
           x) ) }) + 
-  guides(fill = guide_legend(label.theme = element_markdown())) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+  theme(legend.text = element_markdown(size = 14, face = "bold"))+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm"),
+    strip.text = element_text(face = "bold", size = 16),
+    legend.position = "right",
+    legend.text = ggtext::element_markdown(size = 10, face = "bold"),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.width = unit(0.3, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5)) + 
+  guides(fill = guide_legend(
+    ncol = 1,          
+    byrow = TRUE))
+  
+
 
 
 #RGM dry
@@ -1347,10 +1475,32 @@ ggplot(Phy_relabRtlong,
       ifelse(
         x %in% sigphyla_dry_lat,
         paste0("**", x, "** +"),
-        x)} ) + 
-  guides(fill = guide_legend(label.theme = element_markdown())) + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
-
+        x)} )+ 
+  theme(legend.text = element_markdown(size = 14, face = "bold"))+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm"),
+    strip.text = element_text(face = "bold", size = 16),
+    legend.position = "right",
+    legend.text = ggtext::element_markdown(size = 10, face = "bold"),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.width = unit(0.3, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5)) + 
+  guides(fill = guide_legend(
+    ncol = 1,          
+    byrow = TRUE))
 
 
 #By treatment/season
@@ -1661,9 +1811,32 @@ p1 <- ggplot(wet_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
   labs(
     title = "Wet Season",
     x = "",
-    y = "Relative Abundance"
-  ) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+    y = "Relative Abundance") +
+  theme(legend.text = element_markdown(size = 14, face = "bold"))+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm"),
+    strip.text = element_text(face = "bold", size = 16),
+    legend.position = "bottom",
+    legend.text = ggtext::element_markdown(size = 10, face = "bold"),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.width = unit(0.3, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5)) + 
+  guides(fill = guide_legend(
+    ncol = 3,          
+    byrow = TRUE))
 
 
 # PLOT 2 — dry season
@@ -1685,20 +1858,35 @@ p2 <- ggplot(dry_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
     title = "Dry Season (RGM)",
     x = "",
     y = "Relative Abundance") +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
+  theme(legend.text = element_markdown(size = 14, face = "bold"))+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title.y = element_text(face="bold", size = 18), 
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 16),
+    axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+    plot.margin = unit(c(0.1,0.1,0,0.1),"cm"),
+    strip.text = element_text(face = "bold", size = 16),
+    legend.position = "bottom",
+    legend.text = ggtext::element_markdown(size = 10, face = "bold"),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.width = unit(0.3, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5)) + 
+  guides(fill = guide_legend(
+    ncol = 3,          
+    byrow = TRUE))
 
-#combine into a single legend for plotting 
-legend <- get_legend(p1)
-
-#plot combined figure 
-final_plot <- plot_grid(
-  p1 + theme(legend.position = "none"),
-  p2 + theme(legend.position = "none"),
-  ncol = 2)
-plot_grid(final_plot, legend, rel_widths = c(4, 1))
 
 
-#current plot
+#current combined plot
 (p1 | p2) +
   plot_annotation(title = "(a)", theme = theme(
     plot.title = element_text(hjust = 0.5)))
