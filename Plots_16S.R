@@ -257,15 +257,15 @@ ggplot(critter_wet_split2, aes(x=Vicuna.RAI, y=Observed)) +
         axis.title.x = element_text(size = 18, face = "bold", color = "black"),
         plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
 
-critter_wet_split$elev_group <- factor(
-  critter_wet_split$elev_group,
+critter_wet_split2$elev_group <- factor(
+  critter_wet_split2$elev_group,
   levels = c("Low elevation", "High elevation"))
 
 ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) + 
   geom_point(size = 3, aes(color = elevation)) + 
   scale_color_gradient(
-    low = "#5281B0",
-    high = "#fae100" ,
+    low = "#4f8078",
+    high = "#db8a69" ,
     name = "Elevation") +
   ggnewscale::new_scale_color() +
   geom_smooth(
@@ -274,19 +274,19 @@ ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) +
     alpha = 0.3 , linewidth = 1.5) +
   scale_color_manual(
     values = c(
-      "Low elevation" = "#87CEEB",
-      "High elevation" = "#F0E68CFF"),
+      "Low elevation" = "#5D978E",
+      "High elevation" =  "#FFA07A" ),
     guide = "none") +
   scale_fill_manual(
     values = c(
-      "Low elevation" = "#87CEEB",
-      "High elevation" = "#F0E68CFF"),
+      "Low elevation" = "#5D978E",
+      "High elevation" =  "#FFA07A" ),
     guide = "none" ) +
   facet_wrap(~elev_group) +
   labs(
-    title = "(a)",
+    tag = "(a)",
     x = "RAI",
-    y = "Prokaryote richness") +
+    y = "Eukaryote richness") +
   theme_bw() +
   theme(strip.text = element_text(face = "bold", size = 16), 
         legend.title = element_text(size = 14, face = "bold"), 
@@ -296,7 +296,11 @@ ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) +
         axis.text.x = element_text(size = 16),
         axis.text.y = element_text(size = 16),
         axis.title.x = element_text(size = 18, face = "bold", color = "black"),
-        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
+        plot.margin = unit(c(0.1,0.1,0,0.1),"cm")) + 
+  theme(
+    plot.tag = element_text(face = "bold", size = 18),
+    plot.tag.position = c(0.02, 0.99)) 
+#export 1000 x 600
 
 
 ## Alpha diversity plot----
@@ -469,10 +473,10 @@ ggplot(metadata_wet, aes(class, Observed)) +
   facet_wrap(~treatment, nrow=1)
 
 #or grouped by class 
-wetrich_chrono_plot <- ggplot(metadata_wet, aes(treatment, Observed)) +
+wetrich_chrono_plot <- ggplot(metadata_wet2, aes(treatment, Observed)) +
   geom_boxplot(aes(fill=treatment)) + #adds boxplot
   geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
-  labs(x = NULL, y = NULL, title = "a)") +
+  labs(x = NULL, y = NULL, tag = "(a)") +
   scale_fill_manual(values=c("#4DD7CE","#9C6EB0"), guide='none')+ #colors the two different treatments
   scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
   scale_x_discrete(labels = c(
@@ -489,8 +493,12 @@ wetrich_chrono_plot <- ggplot(metadata_wet, aes(treatment, Observed)) +
         axis.text.y = element_text(size = 16),
         axis.title.x = element_text(size = 18, face = "bold", color = "black"),
         plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))+
-  facet_wrap(~class, nrow = 1)
+  facet_wrap(~class, nrow = 1) + 
+  theme(
+    plot.tag = element_text(face = "bold", size = 18),
+    plot.tag.position = c(0.02, 0.99)) 
 wetrich_chrono_plot
+#export 1000 x 600
 
 ## Wet subset Shannon----
 ggplot(metadata_wet, aes(treatment, Shannon)) +
@@ -691,7 +699,7 @@ wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
     labels = class_labels) + 
   xlab(paste0("PCoA 1 (", var_exp[1], "%)")) +
   ylab(paste0("PCoA 2 (", var_exp[2], "%)")) + 
-  labs(title='(a)', color = NULL) +
+  labs(tag = '(a)', color = NULL) +
   theme_bw() +
   theme(
     panel.border = element_blank(),
@@ -717,7 +725,10 @@ wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
       fill = "white" )) +
   guides(
     colour = guide_legend(override.aes = list(size = 2.75)),
-    fill = guide_legend(ncol = 4, override.aes = list(alpha = 0.1)))
+    fill = guide_legend(ncol = 4, override.aes = list(alpha = 0.1))) + 
+  theme(
+    plot.tag = element_text(face = "bold", size = 18),
+    plot.tag.position = c(0.02, 0.99)) 
 wetbeta_chrono
 
 ##### just LIA----

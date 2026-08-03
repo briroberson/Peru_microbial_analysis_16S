@@ -429,6 +429,9 @@ critter_data$latrine_trt_month <- factor(critter_data$latrine_trt_month)
 metadata_filt<- metadata_filt %>% 
   full_join(chrono, by='latrine')
 
+#export for other analyses 
+write.csv(metadata_filt, file='16s_metadata_filt.csv')
+
 ############ make the things going into the models factors
 ## Wet Subset Models ----
 ### 4c. Run models wet data subset by soil age 
@@ -2155,7 +2158,7 @@ up = ceiling(max(phyl_fig$value))
 fig_phyl = phyl_fig %>%
   ggplot(aes(x = group, y = taxon, fill = value)) + 
   geom_tile(color = "black") +
-  scale_fill_gradient2(low = "#68CDA8", high = "#9C6EB0", mid = "white", 
+  scale_fill_gradient2(low = "#4DD7CE", high = "#9C6EB0", mid = "white", 
                        na.value = "white", midpoint = 0, limit = c(lo, up),
                        breaks=c(4,-2), labels=c('More abundant \
 on latrines','More abundant \
@@ -2163,9 +2166,14 @@ on referencess')) +
   geom_text(aes(group, taxon, label = value), size = 4) +
   scale_color_identity(guide = "none") +
   labs(x = NULL, y = NULL, title = NULL) +
-  theme_classic() +
-  theme(axis.text.x=element_text(),
-        legend.title=element_blank())
+  theme_bw() +
+  theme(legend.title=element_blank(), 
+        legend.text = element_text(size = 12, face = "bold"), 
+        plot.title = element_text(size = 16, hjust = 0.5),
+        axis.title.y = element_text(face="bold", size = 18), 
+        axis.text.x = element_text(size = 16, face = "bold", color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.x = element_text(size = 18, face = "bold", color = "black"))
 fig_phyl
 
 #### make that plot comparing simper and ancombc2 taxa----
