@@ -286,7 +286,7 @@ ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) +
   labs(
     tag = "(a)",
     x = "RAI",
-    y = "Eukaryote richness") +
+    y = "Prokaryote richness") +
   theme_bw() +
   theme(strip.text = element_text(face = "bold", size = 16), 
         legend.title = element_text(size = 14, face = "bold"), 
