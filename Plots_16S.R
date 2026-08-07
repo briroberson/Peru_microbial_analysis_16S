@@ -1301,7 +1301,7 @@ label_vec <- setNames(
   sample_labels$latrine,
   sample_labels$sample)
 
-#plot
+#plot 1275 x 680
 ggplot(Phy_relabLtlong,
        aes(x = sample, y = value, fill = taxa)) +
   geom_bar(stat = "identity", position = "fill") +
@@ -1313,9 +1313,10 @@ ggplot(Phy_relabLtlong,
                  control = "Reference",
                  latrine = "Latrine" ))) +
   scale_x_discrete(labels = label_vec) +
-  labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)") +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum", tag = "(a)") +
   scale_fill_manual(values = cols) +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))  +
+  ggtitle("16S") + 
   theme_bw() +
   theme(
     plot.title = element_text(size = 16, hjust = 0.5),
@@ -1337,8 +1338,12 @@ ggplot(Phy_relabLtlong,
       fill = "white",
       linewidth = 0.5)) + 
   guides(fill = guide_legend(
-      ncol = 1,          
-      byrow = TRUE))
+    ncol = 1,          
+    byrow = TRUE)) + 
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        plot.tag = element_text(face = "bold", size = 18),
+        plot.tag.position = c(0.02, 0.99)) 
+
 
 
 
@@ -1377,7 +1382,7 @@ Phy_relabWtlong$Phylum_lab <- ifelse(
   Phy_relabWtlong$Phylum_lab)
 sig <- c(sigphyla_wet_ref, sigphyla_wet_lat)
 
-#plot
+#plot 1275 x 680
 ggplot(Phy_relabWtlong, 
        aes(x = sample, y = value, fill = taxa)) +
   geom_bar(stat = "identity", position = "fill") +
@@ -1389,7 +1394,7 @@ ggplot(Phy_relabWtlong,
                  control = "Reference",
                  latrine = "Latrine" ))) +
   scale_x_discrete(labels = label_vec) +
-  labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)") +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum", tag = "(a)") +
   #scale_fill_manual(values = cols) +
   scale_fill_manual(
     values = cols,
@@ -1405,6 +1410,7 @@ ggplot(Phy_relabWtlong,
   theme(legend.text = element_markdown(size = 14, face = "bold"))+
   theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
   theme_bw() +
+  ggtitle("16S") + 
   theme(
     plot.title = element_text(size = 16, hjust = 0.5),
     axis.title.y = element_text(face="bold", size = 18), 
@@ -1426,7 +1432,11 @@ ggplot(Phy_relabWtlong,
       linewidth = 0.5)) + 
   guides(fill = guide_legend(
     ncol = 1,          
-    byrow = TRUE))
+    byrow = TRUE)) + 
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        plot.tag = element_text(face = "bold", size = 18),
+        plot.tag.position = c(0.02, 0.99)) 
+
   
 
 
@@ -1465,7 +1475,7 @@ Phy_relabRtlong$Phylum_lab <- ifelse(
 sig <- c(sigphyla_dry_lat)
 
 
-#plot
+#plot 1275 x 680
 ggplot(Phy_relabRtlong, 
        aes(x = sample, y = value, fill = taxa)) +
   geom_bar(stat = "identity", position = "fill") +
@@ -1477,7 +1487,7 @@ ggplot(Phy_relabRtlong,
                  control = "Reference",
                  latrine = "Latrine" ))) +
   scale_x_discrete(labels = label_vec) +
-  labs(x = "Site", y = "Relative abundance", fill = "Phylum", title = "(a)" ) +
+  labs(x = "Site", y = "Relative abundance", fill = "Phylum", tag = "(a)" ) +
  # scale_fill_manual(values = cols) +
   scale_fill_manual(
     values = cols,
@@ -1509,9 +1519,13 @@ ggplot(Phy_relabRtlong,
       colour = "black",
       fill = "white",
       linewidth = 0.5)) + 
+  ggtitle("16S") + 
   guides(fill = guide_legend(
     ncol = 1,          
-    byrow = TRUE))
+    byrow = TRUE))  + 
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        plot.tag = element_text(face = "bold", size = 18),
+        plot.tag.position = c(0.02, 0.99)) 
 
 
 #By treatment/season
@@ -1895,13 +1909,80 @@ p2 <- ggplot(dry_sub_da, aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
     ncol = 3,          
     byrow = TRUE))
 
-
-
-#current combined plot
+#combined plot
 (p1 | p2) +
   plot_annotation(title = "(a)", theme = theme(
     plot.title = element_text(hjust = 0.5)))
 
+
+#ALL in one plot, with separate matching facet for rgmD
+
+#create shared sig label system with w/d denotation 
+legend_labels <- function(x) {
+  
+  lab <- paste0("**", x, "**")
+  
+  wet_ref <- x %in% sigphyla_wet_ref
+  wet_lat <- x %in% sigphyla_wet_lat
+  dry_lat <- x %in% sigphyla_dry_lat
+  
+  lab <- ifelse(wet_ref, paste0(lab, " W−"), lab)
+  lab <- ifelse(wet_lat, paste0(lab, " W+"), lab)
+  lab <- ifelse(dry_lat, paste0(lab, " D+"), lab)
+  
+  lab
+}
+
+
+#add 'panel' variable to map to panels later & combine data subsets 
+wet_sub_da <- wet_sub_da %>%
+  mutate(panel = if_else(Soil == "LIA", "lia", "rgm"))
+
+dry_sub_da <- dry_sub_da %>%
+  mutate(
+    Soil = "RGM",
+    panel = "dry_RGM")
+
+all_sub_da <- bind_rows(wet_sub_da, dry_sub_da)
+all_sub_da$panel <- factor(all_sub_da$panel, levels = c("lia", "rgm", "dry_RGM"))
+
+p_combined <- ggplot(all_sub_da,aes(x = Treatment, y = avg_rel_ab, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(
+    ~panel,
+    nrow = 1,
+    labeller = labeller(panel = c(
+      lia = "Wet season LIA",
+      rgm = "Wet season RGM",
+      dry_RGM = "Dry season RGM"))) +
+  labs(tag = "(a)") + 
+  scale_fill_manual(values = cols, drop = FALSE, labels = legend_labels) +
+  guides(fill = guide_legend(label.theme = ggtext::element_markdown(), ncol = 3, byrow = TRUE)) +
+  labs( x = "", y = "Relative abundance") +
+  theme_bw() +
+  theme(
+    strip.text = element_text(face = "bold", size = 16),
+    axis.title.y = element_text(face = "bold", size = 18),
+    axis.title.x = element_text(face = "bold", size = 18),
+    axis.text.x = element_text(angle = 60, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 16),
+    legend.position = "bottom",
+    legend.text = ggtext::element_markdown(size = 10, face = "bold"),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.width = unit(0.3, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.1, "cm"),
+    legend.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 0.5)) + 
+  ggtitle("16s") + 
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        plot.tag = element_text(face = "bold", size = 18),
+        plot.tag.position = c(0.02, 0.99)) 
+p_combined
+#export 675 x 800
 
 
 
