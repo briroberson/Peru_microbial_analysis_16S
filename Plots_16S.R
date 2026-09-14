@@ -222,44 +222,21 @@ critter_wet_split <- critter_wet %>%
     "Low elevation",
     "High elevation"))
 
-ggplot(critter_wet_split, aes(x=Vicuna.RAI, y=Observed, color=elev_group))+
-  geom_point()+
-  geom_smooth(method='lm')+
-  scale_color_manual(values=c('#2b83ba','#d7191c'))+
-  geom_text_repel(aes(label = X),
-                  size = 3,
-                  max.overlaps = Inf) +
-  theme+
-  theme_bw()+
-  labs(title='Wet RAI vs 16S Richness')
+# extract slope p values 
+slopes <- emtrends(m_wet_vrai_both2, ~ elev_group, var = "Vicuna.RAI")
+summary(slopes, infer = TRUE)   # gives estimate, CI, and p-value per group
 
-ggplot(critter_wet_split2, aes(x=Vicuna.RAI, y=Observed)) + 
-  geom_point(size = 3, alpha = 0.8, aes(color = elevation)) + 
-  scale_color_gradient(low ="#87CEEB", high = "#F0E68CFF") + 
-  geom_smooth(
-    aes(color = elev_group, fill = elev_group),
-    method = "lm",
-    alpha = 0.2)  +
-  labs(title = "(b)", x = 'RAI', y = 'Eukaryote richness') + 
-  facet_wrap(~elev_group) + 
-  labs(
-    title = "(a)",
-    y = "Prokaryote richness",
-    color = "Elevation (m.a.s.l.)") + 
-  theme_bw() +
-  theme(strip.text = element_text(face = "bold", size = 16), 
-        legend.title = element_text(size = 14, face = "bold"), 
-        legend.text = element_text(size = 12, face = "bold"), 
-        plot.title = element_text(size = 16, hjust = 0.5),
-        axis.title.y = element_text(face="bold", size = 18), 
-        axis.text.x = element_text(size = 16),
-        axis.text.y = element_text(size = 16),
-        axis.title.x = element_text(size = 18, face = "bold", color = "black"),
-        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))
+crit_slopes_df <- 
+  data.frame(
+  elev_group = 
+    c("Low elevation", "High elevation"),
+  label = 
+    c("β = 92.6, p = 0.002", "β = -11.3, p = 0.56"))  # fill in from emtrends output
 
 critter_wet_split2$elev_group <- factor(
   critter_wet_split2$elev_group,
-  levels = c("Low elevation", "High elevation"))
+  levels = c("Low elevation", "High elevation")
+)
 
 ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) + 
   geom_point(size = 3, aes(color = elevation)) + 
@@ -287,6 +264,13 @@ ggplot(critter_wet_split2, aes(x = Vicuna.RAI, y = Observed)) +
     tag = "(a)",
     x = "RAI",
     y = "Prokaryote richness") +
+  geom_text(
+    data = crit_slopes_df,
+    aes(x = -Inf, y = Inf, label = label),
+    hjust = -0.1, vjust = 1.5,
+    inherit.aes = FALSE,
+    fontface = "bold", size = 5
+  ) +
   theme_bw() +
   theme(strip.text = element_text(face = "bold", size = 16), 
         legend.title = element_text(size = 14, face = "bold"), 

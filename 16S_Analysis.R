@@ -545,12 +545,71 @@ m_wet_vrai_both2 <- lmer(Observed ~ Vicuna.RAI * elev_group + (1 | latrine),
 summary(m_wet_vrai_both2)
 Anova(m_wet_vrai_both2, type='III')
 
+
 #variance among replicates 
 ggplot(critter_wet_split, aes(x = latrine, y = Observed)) +
   geom_jitter(width = 0.0005) + 
   stat_summary(fun = mean, geom = "point", color = "red", size = 3) + 
   labs(title = "16s variation between reps") + 
   theme_bw()
+
+#RAI and plant diversity 
+
+#bring in plant data 
+plants <- read.csv("carly_all_obs_richness.csv")
+#filter for only inside latrine entries, format latrine names to join, and remove species columns 
+plants_filt <- plants  %>%
+  dplyr::select(Location:Region, rich_obs) %>%
+  dplyr::filter(Distance == 0) %>%
+  mutate(latrine = Location) %>%
+  rename(plantrich = rich_obs) %>%
+  filter(!str_starts(latrine, "2")) %>%
+  mutate(latrine = paste0("L", latrine)) %>%
+  mutate(latrine = str_replace(latrine, "[ab]$", ~ str_to_upper(.x)))
+
+#create a new column for plant quadrat ID to use in random effect
+plants_filt <- plants_filt %>%
+  group_by(Location) %>%
+  mutate(quadrat = row_number()) %>%
+  ungroup() %>%
+  mutate(quadrat_id = interaction(Location, quadrat, drop = TRUE))
+plants_filt$quadrat_id <- as.factor(plants_filt$quadrat_id)
+
+#do the same for microbes 
+
+#format critter data for RAI~plant div by removing microbial div replicate columns (only vert richness needed here)
+critter_wet_split2_single <- critter_wet_split2 %>%
+  dplyr::select(latrine, Vicuna.RAI, Animal.Richness, elev_group) %>%
+  distinct()
+
+#join RAI data (with 2 cameras removed), keep only latrines with RAI
+plants_critters <- plants_filt %>%
+  inner_join(critter_wet_split2_single, by = "latrine")
+plants_critters$latrine <- as.factor(plants_critters$latrine)
+
+#Vicuna RAI ~ plant diversity 
+m_wet_vrai_plants <- lmer(Vicuna.RAI ~ Vicuna.RAI * elev_group + (1|latrine), data = plants_critters)
+summary(m_wet_vrai_plants)
+Anova(m_wet_vrai_plants, type='III')
+qqnorm(residuals(m_wet_vrai_plants))
+
+#Microbial diversity ~ plant diversity
+plants_microbes <- plants_filt %>%
+  inner_join(metadata_wet,
+    by = "latrine",
+    relationship = "many-to-many")
+
+plants_microbes$Observed_sc <- as.numeric(scale(plants_microbes$Observed)) #microbe richness on a much bigger scale than plant, scale here
+
+#Microbe and plant richness 
+m_wet_rich_plants <- lmer(plantrich ~ Observed_sc + (1|latrine) + (1|quadrat_id), data = plants_microbes)
+summary(m_wet_rich_plants)
+Anova(m_wet_rich_plants)
+#With elevation 
+m_wet_rich_plants <- lmer(plantrich ~ Observed_sc * elevation_sc + (1|latrine) + (1|Location), data = plants_microbes)
+summary(m_wet_rich_plants)
+Anova(m_wet_rich_plants)
+
 
 
 #all vert richness
@@ -564,6 +623,7 @@ m_wet_vertshan_rich<- lmer(Observed~Shannon.Index*elevation_sc+(1|latrine_trt_mo
 summary(m_wet_vertshan_rich)
 Anova(m_wet_vertshan_rich, type='III')
 qqnorm(residuals(m_wet_vertshan_rich))
+
 
 ### Shannon's Diversity ----
 #Wet season Shannon's diversity using reference elevation
