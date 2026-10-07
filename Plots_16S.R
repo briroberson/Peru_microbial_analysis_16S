@@ -37,9 +37,29 @@ wetrichel<-ggplot(metadata_wet, aes(x=elevation, y=Observed, color=treatment))+
   geom_point()+
   geom_smooth(method='lm')+
   scale_color_manual(values=c('cyan3','purple3'))+
-  labs(title='Wet Richness')+
+  labs(title='Wet Richness', tag = "(a)", x = "Elevation", y = "Prokaryote richness", color = "Substrate type")+
+  ggtitle("16s") +
+  scale_color_manual(
+    values = c(control = "cyan3", latrine = "purple3"),
+    labels = c(
+      control = "Reference",
+      latrine = "Latrine"
+    )
+  ) +
   theme+
-  theme_bw()
+  theme_bw() + 
+  theme(strip.text = element_text(face = "bold", size = 16), 
+        legend.title = element_text(size = 14, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold"), 
+        plot.title = element_text(size = 16, hjust = 0.5),
+        axis.title.y = element_text(face="bold", size = 18), 
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))+
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"), 
+        plot.tag = element_text(face = "bold", size = 18),
+        plot.tag.position = c(0.02, 0.99)) 
 wetrichel
 
 #export the plot to a powerpoint to edit
@@ -231,7 +251,7 @@ crit_slopes_df <-
   elev_group = 
     c("Low elevation", "High elevation"),
   label = 
-    c("β = 92.6, p = 0.002", "β = -11.3, p = 0.56"))  # fill in from emtrends output
+    c("β = 92.6, p = 0.002*", "β = -11.3, p = 0.56"))  # fill in from emtrends output
 
 critter_wet_split2$elev_group <- factor(
   critter_wet_split2$elev_group,
@@ -460,13 +480,14 @@ ggplot(metadata_wet, aes(class, Observed)) +
 wetrich_chrono_plot <- ggplot(metadata_wet2, aes(treatment, Observed)) +
   geom_boxplot(aes(fill=treatment)) + #adds boxplot
   geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
-  labs(x = NULL, y = NULL, tag = "(a)") +
+  labs(x = NULL, y = NULL, tag = "(c)") +
   scale_fill_manual(values=c("#4DD7CE","#9C6EB0"), guide='none')+ #colors the two different treatments
   scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
   scale_x_discrete(labels = c(
     control = "Reference",
     latrine = "Latrine")) +
   labs(color = "Elevation") + 
+  ggtitle("16s") + 
   theme_bw() +
   theme(strip.text = element_text(face = "bold", size = 16), 
         legend.title = element_text(size = 14, face = "bold"), 
@@ -478,11 +499,20 @@ wetrich_chrono_plot <- ggplot(metadata_wet2, aes(treatment, Observed)) +
         axis.title.x = element_text(size = 18, face = "bold", color = "black"),
         plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))+
   facet_wrap(~class, nrow = 1) + 
-  theme(
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"), 
     plot.tag = element_text(face = "bold", size = 18),
     plot.tag.position = c(0.02, 0.99)) 
 wetrich_chrono_plot
+
+
+#combine with wet richness regression plot
+wetrichel + wetrich_chrono_plot
+
 #export 1000 x 600
+
+
+
+
 
 ## Wet subset Shannon----
 ggplot(metadata_wet, aes(treatment, Shannon)) +
