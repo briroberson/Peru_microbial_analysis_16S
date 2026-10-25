@@ -59,7 +59,15 @@ wetrichel<-ggplot(metadata_wet, aes(x=elevation, y=Observed, color=treatment))+
         plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))+
   theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"), 
         plot.tag = element_text(face = "bold", size = 18),
-        plot.tag.position = c(0.02, 0.99)) 
+        plot.tag.position = c(0.02, 0.99)) + 
+  theme(
+    legend.position = c(0.98, 0.98),
+    legend.justification = c(1, 1),
+    legend.background = element_rect(
+      fill = "white",
+      colour = "black"
+    )
+  )
 wetrichel
 
 #export the plot to a powerpoint to edit
@@ -508,10 +516,38 @@ wetrich_chrono_plot
 #combine with wet richness regression plot
 wetrichel + wetrich_chrono_plot
 
-#export 1000 x 600
+#export 1800 x 800
 
 
-
+# only recent class for graphical abstract: 
+wetrich_chrono_abstract <- ggplot(
+  dplyr::filter(metadata_wet2, class == "1984-2024"),
+  aes(treatment, Observed)
+) + geom_boxplot(aes(fill=treatment)) + #adds boxplot
+  geom_point(size = 3, aes(color=elevation), alpha = .7) + #adds the individual points
+  labs(x = NULL, y = NULL) +
+  scale_fill_manual(values=c("#4DD7CE","#9C6EB0"), guide='none')+ #colors the two different treatments
+  scale_color_gradient(low='lightgray', high='black')+ #colors elevation so low values are lighter
+  scale_x_discrete(labels = c(
+    control = "Reference",
+    latrine = "Latrine")) +
+  labs(color = "Elevation") + 
+  ggtitle("16S") + 
+  facet_wrap(~class) + 
+  theme_bw() +
+  theme(strip.text = element_text(face = "bold", size = 16), 
+        legend.title = element_text(size = 14, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold"), 
+        plot.title = element_text(size = 16, hjust = 0.5),
+        axis.title.y = element_text(face="bold", size = 18), 
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 18, face = "bold", color = "black"),
+        plot.margin = unit(c(0.1,0.1,0,0.1),"cm"))+
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"), 
+        plot.tag = element_text(face = "bold", size = 18),
+        plot.tag.position = c(0.02, 0.99)) 
+wetrich_chrono_abstract
 
 
 ## Wet subset Shannon----
@@ -635,15 +671,15 @@ pcoaW<-cmdscale(d=distance(filt_rare_wet2, method='wunifrac'), eig=T)
 spscorW<-as.data.frame(wascores(x = pcoaW$points, w = tasvW))
 #subset to top 10 significant asvs from simper to plot 
 spscorW$ASV <- rownames(spscorW)
-spscorW_top5 <- spscorW %>%
-  dplyr::filter(ASV %in% simper_chronoW_top5$species)
+spscorW_top10 <- spscorW %>%
+  dplyr::filter(ASV %in% simper_chronoW_top10$ASV)
 #add taxonomy 
 tax_df <- as.data.frame(phyloseq::tax_table(filt_rare_wet2)) %>%
   tibble::rownames_to_column("ASV")
-spscorW_top5 <- spscorW_top5 %>%
+spscorW_top10 <- spscorW_top10 %>%
   dplyr::left_join(tax_df, by = "ASV")
 #select lowest assigned taxonomy
-spscorW_top5 <- spscorW_top5 %>%
+spscorW_top10 <- spscorW_top10 %>%
   mutate(
     tax_label = case_when(
       !Genus %in% c("Incertae_Sedis", "Subgroup_10") ~ Genus,
@@ -693,16 +729,16 @@ var_exp <- round(100 * pcoaW$eig / sum(pcoaW$eig[pcoaW$eig > 0]), 1)
 wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
   geom_polygon(data = micro.hullsW, 
                aes(colour = trt_class, fill = trt_class), alpha = 0.4, linejoin = "round", show.legend = F) +
-  geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW_top5, arrow=arrow(length = unit(0.1, "cm"), type = "closed"))+
+  geom_segment(aes(x=0, xend=V1, y=0, yend=V2), data=spscorW_top10, arrow=arrow(length = unit(0.1, "cm"), type = "closed"))+
   geom_point(size = 2, aes(colour = trt_class))+ 
   ggrepel::geom_text_repel(
-    data = spscorW_top5,
+    data = spscorW_top10,
     aes(V1, V2, label = tax_label),
-    size = 3.5,
+    size = 6,
     max.overlaps = Inf,
-    box.padding = 0.4,
-    point.padding = 0.3,
-    segment.color = "black") + 
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = NA)  +
   scale_colour_manual(
     values = pcoa_cols2,
     breaks = names(class_labels),
@@ -713,12 +749,12 @@ wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
     labels = class_labels) + 
   xlab(paste0("PCoA 1 (", var_exp[1], "%)")) +
   ylab(paste0("PCoA 2 (", var_exp[2], "%)")) + 
-  labs(tag = '(a)', color = NULL) +
+  labs(tag = '(a)', color = NULL, title = "a) 16S Beta Diversity") +
   theme_bw() +
   theme(
     panel.border = element_blank(),
     axis.line = element_line(colour = "black") , 
-    plot.title = element_text(size = 16, hjust = 0.5),
+    plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
     axis.title.y = element_text(face="bold", size = 18), 
     axis.text.y = element_text(size = 16),
     axis.title.x = element_text(size = 18, face = "bold",color = "black"),
@@ -742,8 +778,33 @@ wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
     fill = guide_legend(ncol = 4, override.aes = list(alpha = 0.1))) + 
   theme(
     plot.tag = element_text(face = "bold", size = 18),
-    plot.tag.position = c(0.02, 0.99)) 
+    plot.tag.position = c(0.02, 0.98)) 
 wetbeta_chrono
+
+# export figure taxa to BLAST: 
+
+#read in sequences 
+rep_seqs <- read_qza("Jan25_rep-seqs.qza")$data
+seq_df <- data.frame(
+  ASV = names(rep_seqs),
+  Sequence = as.character(rep_seqs),
+  stringsAsFactors = FALSE)
+
+# Extract PCoA axis scores for each ASV
+axis_df <- spscorW %>%
+  dplyr::select(ASV, axis01 = V1, axis02 = V2)
+
+# Join sequences and PCoA axis scores
+chronoW_top10_blast_16s <-simper_chronoW_top10 %>%
+  left_join(seq_df, by = "ASV") %>%
+  left_join(axis_df, by = "ASV")
+
+# Export
+write.csv(
+  chronoW_top10_blast_16s,
+  "chronoW_top10_blast_16s_TOP10_OVERALL.csv",
+  row.names = FALSE
+)
 
 ##### just LIA----
 #get just lia phyloseq and metadata

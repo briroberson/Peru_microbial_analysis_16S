@@ -404,11 +404,11 @@ metadata_filt<- metadata_filt %>%
 #  left_join(slope_aspect, by='latrine')
 
 #add critter stuff
-critter$latrine<- critter$X
+#critter$latrine<- critter$X
 
-metadata_crit<- metadata_filt %>% 
-  filter(treatment=='latrine') %>% 
-  dplyr::select(c('latrine','Observed','Shannon','elevation','InvSimpson','Pielou','replicate','latrine_trt_month','month-collected','elevation'))
+#metadata_crit<- metadata_filt %>% 
+#  filter(treatment=='latrine') %>% 
+#  dplyr::select(c('latrine','Observed','Shannon','elevation','InvSimpson','Pielou','replicate','latrine_trt_month','month-collected','elevation'))
 
 #critter_filt<-critter %>% 
 #  full_join(metadata_crit, by='latrine') 
@@ -1451,7 +1451,9 @@ simper.results %>%
 
 ### See Plots_16S file for code that plots these ASVs as arrows
 
-###Simper across chronosequence classes 
+
+
+### Simper across chronosequence classes 
  
 ##wet season
 asvs_wet <- as.data.frame(otu_table(filt_rare_wet2)) #ASVs
@@ -1512,15 +1514,24 @@ sig_asvs_chronoW <- simper.results %>%
 taxachronoW <- as.data.frame(tax_table(filt_rare_wet2)) %>%
   tibble::rownames_to_column("ASV")
 simper_taxa_chronoWsig <- sig_asvs_chronoW %>%
-  left_join(taxachronoW, by = c("Species" = "ASV"))
-#grab top 5 only 
-simper_chronoW_top5 <- sig_asvs_chronoW %>%
-  group_by(Comparison) %>%
-  arrange(desc(average)) %>%
-  slice_head(n = 5) %>%
-  ungroup()
+  dplyr::select(-species) %>%
+  left_join(taxachronoW, by = c("Species" = "ASV")) %>%
+  dplyr::rename(ASV = Species)
 
-saveRDS(simper_chronoW_top5, file = "16s_simper_chronoW_top5.rds")
+
+# grab top 10 overall only (choosing max avg within ASVs)
+simper_chronoW_top10 <- simper_taxa_chronoWsig %>%
+  group_by(ASV) %>%
+  slice_max(
+    order_by = average,
+    n = 1,
+    with_ties = FALSE
+  ) %>%
+  ungroup() %>%
+  arrange(desc(average)) %>%
+  slice_head(n = 10)
+
+saveRDS(simper_chronoW_top10, file = "16s_simper_chronoW_top10all.rds")
 simper_chronoW_top5 <- readRDS("16s_simper_chronoW_top5.rds")
 
 write.csv(simper_chronoW_top10, "simper_chronoW_top10.csv", row.names = FALSE)
@@ -1570,14 +1581,23 @@ sig_asvs_chronoDRGM <- simper.results %>%
 taxachronoDRGM <- as.data.frame(tax_table(filt_dryRGM2)) %>%
   tibble::rownames_to_column("ASV")
 simper_taxa_chronoDRGMsig <- sig_asvs_chronoDRGM %>%
-  left_join(taxachronoDRGM, by = c("Species" = "ASV"))
+  dplyr::select(-species) %>%
+  left_join(taxachronoW, by = c("Species" = "ASV")) %>%
+  dplyr::rename(ASV = Species)
+
 #grab top 10 only 
 simper_chronoDRGM_top10 <- simper_taxa_chronoDRGMsig %>%
-  group_by(Comparison) %>%
+  group_by(ASV) %>%
+  slice_max(
+    order_by = average,
+    n = 1,
+    with_ties = FALSE
+  ) %>%
+  ungroup() %>%
   arrange(desc(average)) %>%
-  slice_head(n = 10) %>%
-  ungroup()
-write.csv(simper_chronoDRGM_top10, "16s_simper_chronDRGM_top10.csv", row.names = FALSE)
+  slice_head(n = 10)
+
+write.csv(simper_chronoDRGM_top10, "16s_simper_chronDRGM_top10all.csv", row.names = FALSE)
 
 
 #subset by treatment
@@ -1612,6 +1632,7 @@ taxachronoW_lats <- as.data.frame(tax_table(filt_rare_wet2_lats)) %>%
   tibble::rownames_to_column("ASV")
 simper_taxa_chronoWsig_lats <- sig_asvs_chronoW_lats %>%
   left_join(taxachronoW_lats, by = c("ASV" = "ASV"))
+
 #grab top 10 only 
 simper_chronoW_top10_lats <- simper_taxa_chronoWsig_lats %>%
   group_by(Comparison) %>%
