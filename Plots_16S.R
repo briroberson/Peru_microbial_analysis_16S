@@ -781,29 +781,43 @@ wetbeta_chrono<-ggplot(metadata_wet2, aes(axis01, axis02)) +
     plot.tag.position = c(0.02, 0.98)) 
 wetbeta_chrono
 
-# export figure taxa to BLAST: 
+# Export figure taxa to BLAST
 
-#read in sequences 
+# Read representative sequences
 rep_seqs <- read_qza("Jan25_rep-seqs.qza")$data
+
 seq_df <- data.frame(
-  ASV = names(rep_seqs),
+  SequenceID = names(rep_seqs),
   Sequence = as.character(rep_seqs),
-  stringsAsFactors = FALSE)
+  stringsAsFactors = FALSE
+)
+
+# Map wet ASV labels to original hash IDs
+asv_mapping <- data.frame(
+  ASV = taxa_names(filt_rare_wet2),
+  SequenceID = taxa_names(filt_rare_phy_16s),
+  stringsAsFactors = FALSE
+)
+
+# Extract taxonomy
+tax_df <- as.data.frame(tax_table(filt_rare_wet2)) %>%
+  tibble::rownames_to_column("ASV")
 
 # Extract PCoA axis scores for each ASV
 axis_df <- spscorW %>%
   dplyr::select(ASV, axis01 = V1, axis02 = V2)
 
-# Join sequences and PCoA axis scores
-chronoW_top10_blast_16s <-simper_chronoW_top10 %>%
-  left_join(seq_df, by = "ASV") %>%
-  left_join(axis_df, by = "ASV")
+# Join SIMPER results, taxonomy, mapping, sequences, and PCoA scores
+chronoW_top10_blast_16s <- simper_chronoW_top10 %>%
+  dplyr::left_join(tax_df, by = "ASV") %>%
+  dplyr::left_join(asv_mapping, by = "ASV") %>%
+  dplyr::left_join(seq_df, by = "SequenceID") %>%
+  dplyr::left_join(axis_df, by = "ASV")
 
-# Export
+# 7. Export
 write.csv(
   chronoW_top10_blast_16s,
-  "chronoW_top10_blast_16s_TOP10_OVERALL.csv",
-  row.names = FALSE
+  "chronoW_top10_blast_16s_TOP10_OVERALL.csv"
 )
 
 ##### just LIA----
